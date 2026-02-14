@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,5 +23,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        Event::listen(function (SocialiteWasCalled $event) {
+            $event->extendSocialite('apple', \SocialiteProviders\Apple\Provider::class);
+        });
     }
 }

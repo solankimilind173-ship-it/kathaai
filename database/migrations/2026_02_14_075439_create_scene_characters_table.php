@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('story_chunks', function (Blueprint $table) {
+        Schema::create('scene_characters', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
-            $table->longText('chunk_text');
-            $table->integer('chunk_order');
-            $table->integer('token_count')->nullable();
+            $table->foreignId('scene_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('character_id')->constrained()->cascadeOnDelete();
+            $table->string('action')->nullable(); // what character is doing in this scene
             $table->timestamps();
         });
     }
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('story_chunks');
+        Schema::dropIfExists('scene_characters');
     }
 };

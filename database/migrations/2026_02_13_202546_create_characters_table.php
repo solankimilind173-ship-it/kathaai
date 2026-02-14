@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('story_chunks', function (Blueprint $table) {
+        Schema::create('characters', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
-            $table->longText('chunk_text');
-            $table->integer('chunk_order');
-            $table->integer('token_count')->nullable();
+            $table->string('name');
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('story_chunks');
+        Schema::dropIfExists('characters');
     }
 };

@@ -1,5 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import Card from '@/Components/Card';
+import PrimaryButton from '@/Components/PrimaryButton';
+import { Head, Link } from '@inertiajs/react';
 
 export default function Dashboard() {
     return (
@@ -14,11 +16,14 @@ export default function Dashboard() {
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            You're logged in!
+                    <Card>
+                        <p className="text-gray-900">You're logged in!</p>
+                        <div className="mt-4">
+                            <Link href={route('projects.index')}>
+                                <PrimaryButton>View Projects</PrimaryButton>
+                            </Link>
                         </div>
-                    </div>
+                    </Card>
                 </div>
             </div>
         </AuthenticatedLayout>

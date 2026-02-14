@@ -10,11 +10,16 @@ class Episode extends Model
         'project_id',
         'title',
         'summary',
-        'status',
+        'status'
     ];
 
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function scenes()
+    {
+        return $this->hasMany(Scene::class);
     }
 }
