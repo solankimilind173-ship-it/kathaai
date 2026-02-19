@@ -5,26 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * Ledger entry for user credits. Positive amount = granted, negative = used.
- * Type: admin_adjustment, monthly_grant, usage.
- */
-class CreditTransaction extends Model
+class SceneRenderSettings extends Model
 {
+    protected $table = 'scene_render_settings';
+
     protected $fillable = [
-        'user_id',
         'project_id',
         'scene_id',
-        'amount',
-        'type',
-        'feature',
-        'description',
+        'sort_order',
+        'duration_trimmed',
+        'transition_style',
     ];
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
+    protected $casts = [
+        'sort_order' => 'integer',
+        'duration_trimmed' => 'integer',
+    ];
 
     public function project(): BelongsTo
     {
@@ -36,4 +32,3 @@ class CreditTransaction extends Model
         return $this->belongsTo(Scene::class);
     }
 }
-

@@ -158,8 +158,20 @@ Return ONLY the visual description paragraph.
         return $path;
     }
 
-    public function generateScenes(string $episodeSummary): array
+    /**
+     * @param  array<int, array{name: string, reference: string}>  $lockedFaceReferences  Character name => face reference URL/path for visual consistency
+     */
+    public function generateScenes(string $episodeSummary, array $lockedFaceReferences = []): array
     {
+        $faceRefPrompt = '';
+        if (! empty($lockedFaceReferences)) {
+            $lines = array_map(
+                fn (array $ref) => "- {$ref['name']}: use locked face reference for all visual descriptions",
+                $lockedFaceReferences
+            );
+            $faceRefPrompt = "\n\nAlways use the locked face reference for each character. Maintain visual consistency:\n" . implode("\n", $lines) . "\n";
+        }
+
         $response = $this->client->chat()->create([
             'model' => 'gpt-4o-mini',
             'temperature' => 0.3,
@@ -189,7 +201,7 @@ Rules:
 - No markdown
 - No explanation
 - Only JSON array
-'
+' . $faceRefPrompt,
                 ],
                 [
                     'role' => 'user',

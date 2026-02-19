@@ -4,29 +4,111 @@ import Badge from '@/Components/Badge';
 import EmptyState from '@/Components/EmptyState';
 import PageHeading from '@/Components/PageHeading';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link } from '@inertiajs/react';
+import SecondaryButton from '@/Components/SecondaryButton';
+import DangerButton from '@/Components/DangerButton';
+import InputLabel from '@/Components/InputLabel';
+import TextInput from '@/Components/TextInput';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
+
+const statusVariantMap = {
+    draft: 'draft',
+    generating: 'pending',
+    ready: 'info',
+    rendering: 'pending',
+    completed: 'completed',
+    failed: 'danger',
+    archived: 'default',
+};
 
 function statusVariant(status) {
-    const map = { draft: 'draft', processing: 'pending', completed: 'completed' };
-    return map[status] ?? 'default';
+    const s = typeof status === 'string' ? status : status?.value ?? status;
+    return statusVariantMap[s] ?? 'default';
 }
 
-export default function Index({ projects }) {
+function formatDate(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    return d.toLocaleDateString(undefined, { dateStyle: 'medium' });
+}
+
+export default function Index({ projects, filters = {}, statusOptions = [] }) {
+    const { flash, errors: pageErrors } = usePage().props ?? {};
+    const statusLabelMap = useMemo(() => Object.fromEntries(statusOptions.map((o) => [o.value, o.label])), [statusOptions]);
+
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+    const { data, setData, get } = useForm({
+        search: filters.search ?? '',
+        status: filters.status ?? '',
+        date_from: filters.date_from ?? '',
+        date_to: filters.date_to ?? '',
+        sort: filters.sort ?? 'created_at',
+        dir: filters.dir ?? 'desc',
+    });
+
+    const applyFilters = (e) => {
+        e?.preventDefault();
+        get(route('projects.index'), { preserveState: true });
+    };
+
+    const clearFilters = () => {
+        setData({
+            search: '',
+            status: '',
+            date_from: '',
+            date_to: '',
+            sort: 'created_at',
+            dir: 'desc',
+        });
+        router.get(route('projects.index'));
+    };
+
+    const handleSort = (field) => {
+        const nextDir = data.sort === field && data.dir === 'desc' ? 'asc' : 'desc';
+        router.get(route('projects.index'), { ...filters, sort: field, dir: nextDir }, { preserveState: true });
+    };
+
+    const handleClone = (project) => router.post(route('projects.clone', project));
+    const handleArchive = (project) => router.patch(route('projects.archive', project));
+    const handleDelete = (project) => {
+        if (deleteConfirm === project.id) {
+            router.delete(route('projects.destroy', project));
+            setDeleteConfirm(null);
+        } else {
+            setDeleteConfirm(project.id);
+            setTimeout(() => setDeleteConfirm(null), 3000);
+        }
+    };
+
+    const items = projects.data ?? projects;
+    const pagination = projects.data ? projects : null;
+    const hasFilters = data.search || data.status || data.date_from || data.date_to;
+
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight">
-                    Projects
-                </h2>
+                <h2 className="text-xl font-semibold leading-tight text-gray-800">Projects</h2>
             }
         >
             <Head title="My Projects" />
 
-            <div className="py-12">
+            <div className="py-6">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    {flash?.success && (
+                        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                            {flash.success}
+                        </div>
+                    )}
+                    {(flash?.error || pageErrors?.credits) && (
+                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                            {flash?.error ?? pageErrors?.credits}
+                        </div>
+                    )}
+
                     <PageHeading
                         title="My Projects"
-                        description="Your story projects and their status."
+                        description="List, filter, and manage your story projects."
                         action={
                             <Link href={route('projects.create')}>
                                 <PrimaryButton>New Project</PrimaryButton>
@@ -34,44 +116,240 @@ export default function Index({ projects }) {
                         }
                     />
 
-                    {projects.length === 0 ? (
+                    <Card className="mb-6">
+                        <form onSubmit={applyFilters} className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                                <div>
+                                    <InputLabel value="Search by title" />
+                                    <TextInput
+                                        className="mt-1 block w-full"
+                                        value={data.search}
+                                        onChange={(e) => setData('search', e.target.value)}
+                                        placeholder="Project title..."
+                                    />
+                                </div>
+                                <div>
+                                    <InputLabel value="Status" />
+                                    <select
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        value={data.status}
+                                        onChange={(e) => setData('status', e.target.value)}
+                                    >
+                                        <option value="">All statuses</option>
+                                        {statusOptions.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <InputLabel value="From date" />
+                                    <TextInput
+                                        type="date"
+                                        className="mt-1 block w-full"
+                                        value={data.date_from}
+                                        onChange={(e) => setData('date_from', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <InputLabel value="To date" />
+                                    <TextInput
+                                        type="date"
+                                        className="mt-1 block w-full"
+                                        value={data.date_to}
+                                        onChange={(e) => setData('date_to', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <InputLabel value="Sort" />
+                                    <select
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        value={`${data.sort}-${data.dir}`}
+                                        onChange={(e) => {
+                                            const [sort, dir] = e.target.value.split('-');
+                                            setData({ sort, dir });
+                                        }}
+                                    >
+                                        <option value="created_at-desc">Newest first</option>
+                                        <option value="created_at-asc">Oldest first</option>
+                                        <option value="title-asc">Title A–Z</option>
+                                        <option value="title-desc">Title Z–A</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <PrimaryButton type="submit">Apply filters</PrimaryButton>
+                                {hasFilters && (
+                                    <SecondaryButton type="button" onClick={clearFilters}>
+                                        Clear
+                                    </SecondaryButton>
+                                )}
+                            </div>
+                        </form>
+                    </Card>
+
+                    {items.length === 0 ? (
                         <EmptyState
-                            title="No projects yet"
-                            description="Create your first story project to get started."
+                            title="No projects found"
+                            description={hasFilters ? 'Try changing your filters or create a new project.' : 'Create your first story project to get started.'}
                             action={
-                                <Link href={route('projects.create')}>
-                                    <PrimaryButton>Create Project</PrimaryButton>
-                                </Link>
+                                !hasFilters && (
+                                    <Link href={route('projects.create')}>
+                                        <PrimaryButton>Create Project</PrimaryButton>
+                                    </Link>
+                                )
                             }
                         />
                     ) : (
-                        <div className="space-y-4">
-                            {projects.map((project) => (
-                                <Link
-                                    key={project.id}
-                                    href={route('projects.show', project)}
-                                    className="block transition-transform duration-300 hover:scale-[1.01]"
-                                >
-                                    <Card className="transition-all duration-300 hover:shadow-2xl hover:shadow-amber-900/10 hover:border-amber-300/40">
-                                        <div className="flex flex-wrap items-center justify-between gap-4">
-                                            <div>
-                                                <h3 className="font-semibold text-gray-900">
-                                                    {project.title}
-                                                </h3>
-                                                <p className="mt-1 text-sm text-gray-500">
-                                                    {project.episodes_count} episodes
-                                                    {' · '}
-                                                    {project.characters_count} characters
-                                                </p>
-                                            </div>
-                                            <Badge variant={statusVariant(project.status)}>
-                                                {project.status}
-                                            </Badge>
-                                        </div>
-                                    </Card>
-                                </Link>
-                            ))}
-                        </div>
+                        <>
+                            <Card className="overflow-hidden p-0">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSort('title')}
+                                                        className="hover:text-gray-700"
+                                                    >
+                                                        Title
+                                                    </button>
+                                                </th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    Render status
+                                                </th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    Episodes
+                                                </th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    Scenes
+                                                </th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    Credits used
+                                                </th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSort('created_at')}
+                                                        className="hover:text-gray-700"
+                                                    >
+                                                        Created
+                                                    </button>
+                                                </th>
+                                                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                            {items.map((project) => (
+                                                <tr key={project.id} className="hover:bg-gray-50">
+                                                    <td className="whitespace-nowrap px-4 py-3">
+                                                        <Link
+                                                            href={route('projects.show', project)}
+                                                            className="font-medium text-indigo-600 hover:text-indigo-900"
+                                                        >
+                                                            {project.title}
+                                                        </Link>
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3">
+                                                        <Badge variant={statusVariant(project.status)}>
+                                                            {statusLabelMap[project.status] ?? project.status}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                                                        {project.episodes_count ?? 0}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                                                        {project.scenes_count ?? 0}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-600">
+                                                        {project.total_credits_used ?? 0}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                                                        {formatDate(project.created_at)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Link href={route('projects.show', project)}>
+                                                                <SecondaryButton className="!py-1.5 !text-xs">
+                                                                    View
+                                                                </SecondaryButton>
+                                                            </Link>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleClone(project)}
+                                                                className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                            >
+                                                                Clone
+                                                            </button>
+                                                            {project.status !== 'archived' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleArchive(project)}
+                                                                    className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                                                                >
+                                                                    Archive
+                                                                </button>
+                                                            )}
+                                                            {deleteConfirm === project.id ? (
+                                                                <DangerButton
+                                                                    type="button"
+                                                                    className="!py-1.5 !text-xs"
+                                                                    onClick={() => handleDelete(project)}
+                                                                >
+                                                                    Confirm delete?
+                                                                </DangerButton>
+                                                            ) : (
+                                                                <DangerButton
+                                                                    type="button"
+                                                                    className="!py-1.5 !text-xs"
+                                                                    onClick={() => handleDelete(project)}
+                                                                >
+                                                                    Delete
+                                                                </DangerButton>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+
+                            {pagination && pagination.last_page > 1 && (
+                                <div className="mt-4 flex items-center justify-between">
+                                    <p className="text-sm text-gray-600">
+                                        Showing {pagination.from}–{pagination.to} of {pagination.total}
+                                    </p>
+                                    <div className="flex gap-1">
+                                        {pagination.links?.map((link, i) => (
+                                            <span key={i}>
+                                                {link.url ? (
+                                                    <Link
+                                                        href={link.url}
+                                                        className={`inline-flex rounded border px-3 py-1 text-sm ${
+                                                            link.active
+                                                                ? 'border-indigo-500 bg-indigo-50 font-medium text-indigo-600'
+                                                                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="inline-flex cursor-default rounded border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-400">
+                                                        {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

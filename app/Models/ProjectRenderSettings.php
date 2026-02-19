@@ -6,19 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Episode extends Model
+class ProjectRenderSettings extends Model
 {
+    protected $table = 'project_render_settings';
+
     protected $fillable = [
         'project_id',
-        'title',
-        'episode_number',
-        'summary',
-        'status',
-        'total_credits_used',
+        'background_music_url',
+        'subtitles_enabled',
+        'subtitle_style',
     ];
 
     protected $casts = [
-        'total_credits_used' => 'integer',
+        'subtitles_enabled' => 'boolean',
     ];
 
     public function project(): BelongsTo
@@ -26,8 +26,8 @@ class Episode extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function scenes(): HasMany
+    public function sceneRenderSettings(): HasMany
     {
-        return $this->hasMany(Scene::class);
+        return $this->hasMany(SceneRenderSettings::class, 'project_id', 'project_id');
     }
 }

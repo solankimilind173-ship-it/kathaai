@@ -30,4 +30,24 @@ class CreditCalculator
 
         return $cost;
     }
+
+    /**
+     * Calculate credit cost for a full project render based on settings.
+     * Options: resolution (1080p|4k), format (16:9|9:16), fps (24|30), duration_minutes, background_music (bool).
+     */
+    public function calculateRenderCost(array $options): int
+    {
+        $minutes = (float) ($options['duration_minutes'] ?? 0);
+        $cost = (int) ceil($minutes * config('ai_costs.render_per_minute', 25));
+
+        if (($options['resolution'] ?? '1080p') === '4k') {
+            $cost = (int) ceil($cost * config('ai_costs.4k_multiplier', 2));
+        }
+
+        if (! empty($options['background_music'])) {
+            $cost += (int) config('ai_costs.render_background_music', 5);
+        }
+
+        return max(0, $cost);
+    }
 }

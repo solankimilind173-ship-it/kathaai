@@ -31,16 +31,17 @@ class GenerateEpisodesJob implements ShouldQueue
 
         $episodes = $ai->generateEpisodes($story);
 
-        foreach ($episodes as $ep) {
+        $episodeNumber = (int) Episode::where('project_id', $this->project->id)->max('episode_number') + 1;
 
+        foreach ($episodes as $ep) {
             $episode = Episode::create([
-                'project_id' => $this->project->id,
-                'title'      => $ep['title'],
-                'summary'    => $ep['summary'],
-                'status'     => 'episode_generated',
+                'project_id'        => $this->project->id,
+                'title'             => $ep['title'],
+                'episode_number'    => $episodeNumber++,
+                'summary'           => $ep['summary'],
+                'status'            => 'episode_generated',
             ]);
 
-            // Generate scenes for this episode
             GenerateScenesJob::dispatch($episode);
         }
     }

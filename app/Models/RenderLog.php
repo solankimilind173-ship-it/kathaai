@@ -4,30 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Episode extends Model
+class RenderLog extends Model
 {
+    protected $table = 'render_logs';
+
     protected $fillable = [
         'project_id',
-        'title',
-        'episode_number',
-        'summary',
         'status',
-        'total_credits_used',
+        'started_at',
+        'completed_at',
+        'output_url',
+        'error_message',
     ];
 
     protected $casts = [
-        'total_credits_used' => 'integer',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
-    }
-
-    public function scenes(): HasMany
-    {
-        return $this->hasMany(Scene::class);
     }
 }

@@ -2,15 +2,24 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectStatus;
+use App\Enums\SourceType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
 {
     protected $fillable = [
         'user_id',
+        'book_id',
         'title',
-        'language',
+        'description',
+        'story_source',
+        'source_type',
+        'is_public',
         'status',
+        'total_credits_used',
+        'language',
         'image_generation_completed',
         'video_minutes',
         'quality',
@@ -20,9 +29,19 @@ class Project extends Model
     ];
 
     protected $casts = [
+        'status' => ProjectStatus::class,
+        'source_type' => SourceType::class,
+        'is_public' => 'boolean',
         'intro_song' => 'boolean',
         'background_music' => 'boolean',
+        'total_credits_used' => 'integer',
     ];
+
+    public function book()
+    {
+        return $this->belongsTo(Book::class);
+    }
+
     public function chunks()
     {
         return $this->hasMany(StoryChunk::class);
@@ -31,6 +50,11 @@ class Project extends Model
     public function episodes()
     {
         return $this->hasMany(Episode::class);
+    }
+
+    public function scenes()
+    {
+        return $this->hasManyThrough(Scene::class, Episode::class);
     }
 
     public function characters()
@@ -59,5 +83,41 @@ class Project extends Model
     public function renderLogs()
     {
         return $this->hasMany(ProjectRenderLog::class, 'project_id');
+    }
+
+    /** Per-render-run logs (render_logs table). */
+    public function renderRunLogs()
+    {
+        return $this->hasMany(RenderLog::class, 'project_id');
+    }
+
+    public function renderSettings()
+    {
+        return $this->hasOne(ProjectRenderSettings::class);
+    }
+
+    public function sceneRenderSettings()
+    {
+        return $this->hasMany(SceneRenderSettings::class, 'project_id');
+    }
+
+    /**
+     * Credit usage summary: total credits consumed by this project.
+     */
+    public function getCreditUsageSummaryAttribute(): array
+    {
+        return [
+            'total_credits_used' => (int) $this->total_credits_used,
+        ];
+    }
+
+    public function scopeStatus(Builder $query, ProjectStatus $status): Builder
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeForUser(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
     }
 }

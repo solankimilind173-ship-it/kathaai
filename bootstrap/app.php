@@ -28,5 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo('/dashboard');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->renderable(function (\App\Exceptions\InsufficientCreditsException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage(), 'required' => $e->required, 'available' => $e->available], 402);
+            }
+            return redirect()->back()->withErrors(['credits' => $e->getMessage()])->withInput();
+        });
     })->create();

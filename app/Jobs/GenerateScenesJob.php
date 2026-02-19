@@ -2,10 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Models\Character;
 use App\Models\Episode;
 use App\Models\Scene;
-use App\Services\OpenAIService;
 use App\Jobs\MapSceneCharactersJob;
+use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -51,8 +52,20 @@ class GenerateScenesJob implements ShouldQueue
             // Mark processing (useful for UI)
             $episode->update(['status' => 'generating_scenes']);
 
-            // Step 1: AI generate scenes
-            $scenes = $ai->generateScenes($episode->summary);
+            // Build locked face references for scene generation (always use for consistency)
+            $characters = Character::where('project_id', $episode->project_id)
+                ->with('selectedImage')
+                ->get();
+            $lockedFaceReferences = [];
+            foreach ($characters as $character) {
+                $ref = $character->getLockedFaceReference();
+                if ($ref !== null) {
+                    $lockedFaceReferences[] = ['name' => $character->name, 'reference' => $ref];
+                }
+            }
+
+            // Step 1: AI generate scenes (with locked face reference so descriptions stay consistent)
+            $scenes = $ai->generateScenes($episode->summary, $lockedFaceReferences);
 
             if (!is_array($scenes) || empty($scenes)) {
                 Log::warning('AI returned empty scenes', [
