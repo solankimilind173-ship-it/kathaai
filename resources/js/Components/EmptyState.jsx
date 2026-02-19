@@ -24,15 +24,15 @@ export default function EmptyState({
 
     return (
         <div
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/50 px-6 py-12 text-center ${className}`}
+            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-amber-300 bg-white/80 px-6 py-12 text-center shadow-sm ${className}`}
             {...props}
         >
-            <div className="mb-4">{icon ?? defaultIcon}</div>
+            <div className="mb-4 text-amber-600">{icon ?? defaultIcon}</div>
             {title && (
-                <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+                <h3 className="text-base font-semibold text-stone-800">{title}</h3>
             )}
             {description && (
-                <p className="mt-2 max-w-sm text-sm text-gray-500">{description}</p>
+                <p className="mt-2 max-w-sm text-sm text-stone-600">{description}</p>
             )}
             {action && <div className="mt-6">{action}</div>}
         </div>

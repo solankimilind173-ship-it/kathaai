@@ -1,0 +1,4 @@
+	•	Use eager loading
+	•	Use indexing on analytics queries
+	•	Cache dashboard stats for short duration
+	•	Optimize aggregation queries

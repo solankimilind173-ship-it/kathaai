@@ -14,6 +14,45 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                display: ['Cinzel', 'Georgia', 'serif'],
+            },
+            colors: {
+                bollywood: {
+                    cream: '#fef7ed',
+                    sand: '#fff7ed',
+                    peach: '#ffedd5',
+                    gold: '#b45309',
+                    'gold-light': '#f59e0b',
+                    rose: '#fdf2f8',
+                    maroon: '#9f1239',
+                },
+            },
+            animation: {
+                'sidebar-in': 'sidebarIn 0.3s ease-out forwards',
+                'sidebar-out': 'sidebarOut 0.25s ease-in forwards',
+                'fade-in': 'fadeIn 0.4s ease-out forwards',
+                'slide-up': 'slideUp 0.4s ease-out forwards',
+            },
+            keyframes: {
+                sidebarIn: {
+                    '0%': { transform: 'translateX(-100%)', opacity: '0' },
+                    '100%': { transform: 'translateX(0)', opacity: '1' },
+                },
+                sidebarOut: {
+                    '0%': { transform: 'translateX(0)', opacity: '1' },
+                    '100%': { transform: 'translateX(-100%)', opacity: '0.8' },
+                },
+                fadeIn: {
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' },
+                },
+                slideUp: {
+                    '0%': { opacity: '0', transform: 'translateY(12px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
+                },
+            },
+            backdropBlur: {
+                xs: '2px',
             },
         },
     },

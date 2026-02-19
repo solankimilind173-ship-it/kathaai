@@ -15,7 +15,7 @@ export default function Index({ projects }) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="text-xl font-semibold leading-tight">
                     Projects
                 </h2>
             }
@@ -50,9 +50,9 @@ export default function Index({ projects }) {
                                 <Link
                                     key={project.id}
                                     href={route('projects.show', project)}
-                                    className="block"
+                                    className="block transition-transform duration-300 hover:scale-[1.01]"
                                 >
-                                    <Card className="transition hover:shadow-md">
+                                    <Card className="transition-all duration-300 hover:shadow-2xl hover:shadow-amber-900/10 hover:border-amber-300/40">
                                         <div className="flex flex-wrap items-center justify-between gap-4">
                                             <div>
                                                 <h3 className="font-semibold text-gray-900">

@@ -9,11 +9,20 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) =>
-        resolvePageComponent(
+    resolve: (name) => {
+        // Admin module: Admin/Dashboard -> Admin/Pages/Dashboard.jsx, Admin/Users/Index -> Admin/Pages/Users/Index.jsx
+        if (name.startsWith('Admin/')) {
+            const path = name.replace(/^Admin\/?/, '') || 'Dashboard';
+            return resolvePageComponent(
+                `./Admin/Pages/${path}.jsx`,
+                import.meta.glob('./Admin/Pages/**/*.jsx'),
+            );
+        }
+        return resolvePageComponent(
             `./Pages/${name}.jsx`,
             import.meta.glob('./Pages/**/*.jsx'),
-        ),
+        );
+    },
     setup({ el, App, props }) {
         const root = createRoot(el);
 

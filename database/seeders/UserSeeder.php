@@ -20,6 +20,7 @@ class UserSeeder extends Seeder
             'name' => 'Milind Solanki',
             'email' => 'kathaai@mailinator.com',
             'password' => '12345678',
+            'role' => 'super_admin',
         ]);
     }
 }

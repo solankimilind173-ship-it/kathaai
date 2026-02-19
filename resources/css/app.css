@@ -1,3 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Figtree:ital,wght@0,300..800;1,300..800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Global font rendering: crisp, consistent text across the project */
+@layer base {
+    html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+    body {
+        font-feature-settings: "kern" 1, "liga" 1;
+        /* Slightly improve legibility for small text */
+        font-optical-sizing: auto;
+    }
+    /* Avoid thin or blurry text on light backgrounds */
+    p, span, li, dd, dt {
+        letter-spacing: 0.01em;
+    }
+}
+
+@layer components {
+    /* Light Bollywood theme: light overlay over movie collage background */
+    .bollywood-bg {
+        background-image:
+            linear-gradient(135deg, rgba(254, 247, 237, 0.94) 0%, rgba(255, 251, 235, 0.92) 50%, rgba(255, 242, 232, 0.93) 100%),
+            url('/images/bollywood-bg.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+    .bollywood-bg-fallback {
+        background: linear-gradient(135deg, #fef7ed 0%, #fff7ed 40%, #ffedd5 70%, #fef3c7 100%);
+        background-attachment: fixed;
+    }
+    .glass-panel {
+        @apply rounded-xl border border-amber-200/50 bg-white/95 shadow-lg shadow-amber-900/5 backdrop-blur-sm;
+    }
+    .glass-panel-light {
+        @apply rounded-xl border border-amber-200/30 bg-white shadow-md shadow-amber-900/5;
+    }
+}

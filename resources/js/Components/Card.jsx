@@ -1,10 +1,13 @@
-export default function Card({ className = '', padding = true, children, ...props }) {
+export default function Card({ className = '', padding = true, variant = 'glass', children, ...props }) {
+    const isGlass = variant === 'glass';
     return (
         <div
             className={
-                `overflow-hidden bg-white shadow-sm sm:rounded-lg ${
-                    padding ? 'p-6' : ''
-                } ` + className
+                `overflow-hidden shadow-xl sm:rounded-xl transition-all duration-300 ${
+                    isGlass
+                        ? 'glass-panel-light border-amber-200/30'
+                        : 'bg-white border border-gray-200'
+                } ${padding ? 'p-6' : ''} ` + className
             }
             {...props}
         >
@@ -15,7 +18,7 @@ export default function Card({ className = '', padding = true, children, ...prop
 
 Card.Header = function CardHeader({ className = '', children, ...props }) {
     return (
-        <div className={`border-b border-gray-200 pb-4 mb-4 ${className}`} {...props}>
+        <div className={`border-b border-amber-200/20 pb-4 mb-4 ${className}`} {...props}>
             {children}
         </div>
     );
@@ -23,7 +26,7 @@ Card.Header = function CardHeader({ className = '', children, ...props }) {
 
 Card.Title = function CardTitle({ className = '', children, ...props }) {
     return (
-        <h3 className={`text-lg font-semibold text-gray-900 ${className}`} {...props}>
+        <h3 className={`font-display text-lg font-semibold text-stone-900 ${className}`} {...props}>
             {children}
         </h3>
     );

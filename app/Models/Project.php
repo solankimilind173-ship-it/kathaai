@@ -50,4 +50,14 @@ class Project extends Model
             'project_dub_languages'
         );
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function renderLogs()
+    {
+        return $this->hasMany(ProjectRenderLog::class, 'project_id');
+    }
 }
