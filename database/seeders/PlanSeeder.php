@@ -9,6 +9,10 @@ use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     * Seeds subscription plans (Starter, Pro, Enterprise) and their features.
+     */
     public function run(): void
     {
         $tiers = [

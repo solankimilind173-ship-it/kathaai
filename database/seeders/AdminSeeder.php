@@ -5,25 +5,25 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class UserSeeder extends Seeder
+class AdminSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * Creates one development/demo user (regular user, not admin).
+     * Creates one permanent super admin for the application.
      */
     public function run(): void
     {
-        $email = 'kathaai@mailinator.com';
+        $email = 'superadmin@kathaai.com';
 
         if (User::where('email', $email)->exists()) {
             return;
         }
 
         User::create([
-            'name' => 'Milind Solanki',
+            'name' => 'Super Admin',
             'email' => $email,
-            'password' => '12345678',
-            'role' => 'user',
+            'password' => 'password',
+            'role' => 'super_admin',
         ]);
     }
 }

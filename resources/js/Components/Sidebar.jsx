@@ -195,7 +195,7 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
                             )}
                         </button>
                     </Dropdown.Trigger>
-                    <Dropdown.Content align="left" contentClasses="py-1 bg-white border border-amber-200/50 rounded-lg shadow-xl">
+                    <Dropdown.Content align="left" contentClasses="py-1 bg-white border border-amber-200/50 rounded-lg shadow-xl min-w-[12rem]">
                         {isAdmin && !url.startsWith('/admin') && (
                             <Dropdown.Link href={route('admin.dashboard')} className="text-stone-700 hover:bg-amber-50">
                                 Admin
@@ -209,8 +209,12 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
                         <Dropdown.Link href={route('profile.edit')} className="text-stone-700 hover:bg-amber-50">
                             Profile
                         </Dropdown.Link>
-                        <Dropdown.Link method="post" href={route('logout')} as="button" className="text-stone-700 hover:bg-amber-50">
-                            Log Out
+                        <Dropdown.Link href={route('settings.index')} className="text-stone-700 hover:bg-amber-50">
+                            Settings
+                        </Dropdown.Link>
+                        <div className="my-1 border-t border-amber-200/60" aria-hidden />
+                        <Dropdown.Link method="post" href={route('logout')} as="button" className="text-stone-700 hover:bg-amber-50 text-left w-full">
+                            Logout
                         </Dropdown.Link>
                     </Dropdown.Content>
                 </Dropdown>

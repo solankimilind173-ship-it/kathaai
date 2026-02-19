@@ -7,6 +7,10 @@ use Illuminate\Database\Seeder;
 
 class FeatureDefinitionSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     * Seeds feature definitions used by plans (voice, resolution, limits, etc.).
+     */
     public function run(): void
     {
         $features = [

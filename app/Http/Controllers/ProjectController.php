@@ -72,10 +72,27 @@ class ProjectController extends Controller
 
     public function create()
     {
-        $languages = Language::active()->aiSupported()->get();
-        return inertia('Projects/Create', [
+        $user = auth()->user();
+        $plan = $user->plan;
+
+        // Fallback for users without a plan (e.g. super admin, new accounts)
+        $planPayload = $plan
+            ? [
+                'max_dubbing_languages' => $plan->max_dubbing_languages ?? 1,
+                'max_video_minutes' => $plan->max_video_minutes ?? 5,
+                'max_reels_per_episode' => $plan->max_reels_per_episode ?? 1,
+                'allow_4k' => $plan->allow_4k ?? false,
+            ]
+            : [
+                'max_dubbing_languages' => 1,
+                'max_video_minutes' => 5,
+                'max_reels_per_episode' => 1,
+                'allow_4k' => false,
+            ];
+
+        return Inertia::render('Projects/Create', [
             'languages' => Language::active()->get(),
-            'plan' => auth()->user()->plan,
+            'plan' => $planPayload,
         ]);
     }
 
@@ -84,30 +101,35 @@ class ProjectController extends Controller
         $user = auth()->user();
         $plan = $user->plan;
 
-        if (count($request->dub_languages ?? []) > $plan->max_dubbing_languages) {
+        $maxDubbing = $plan?->max_dubbing_languages ?? 1;
+        $maxMinutes = $plan?->max_video_minutes ?? 5;
+        $maxReels = $plan?->max_reels_per_episode ?? 1;
+        $allow4k = $plan?->allow_4k ?? false;
+
+        if (count($request->dub_languages ?? []) > $maxDubbing) {
             return back()->withErrors([
                 'dub_languages' => 'Upgrade your plan for more dubbing languages.'
             ]);
         }
 
-        if ($request->minutes > $plan->max_video_minutes) {
+        if (($request->minutes ?? 5) > $maxMinutes) {
             return back()->withErrors([
                 'minutes' => 'Video length exceeds your plan limit.'
             ]);
         }
 
-        if ($request->reels > $plan->max_reels_per_episode) {
+        if (($request->reels ?? 0) > $maxReels) {
             return back()->withErrors([
                 'reels' => 'Upgrade plan for more reels.'
             ]);
         }
 
-        if ($request->quality === '4k' && !$plan->allow_4k) {
+        if ($request->quality === '4k' && ! $allow4k) {
             return back()->withErrors([
                 'quality' => '4K available in Pro plan.'
             ]);
         }
-        $maxLanguages = $user->plan?->max_dubbing_languages ?? 1;
+        $maxLanguages = $maxDubbing;
 
         $request->validate([
             'title' => 'required|string|max:255',

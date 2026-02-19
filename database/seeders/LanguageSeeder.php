@@ -10,6 +10,7 @@ class LanguageSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * Seeds supported languages (international and Indian).
      */
     public function run(): void
     {
