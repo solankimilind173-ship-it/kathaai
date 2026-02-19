@@ -4,27 +4,28 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
-import PageHeading from '@/Components/PageHeading';
+import { Head } from '@inertiajs/react';
 import Alert from '@/Components/Alert';
+import LanguageSelect from '@/Components/LanguageSelect';
 
-export default function Create() {
+export default function Create({ languages, plan }) {
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         story: '',
-        language: 'hindi',
+        pdf: null,
+        language_id: '',
+        dub_languages: [], // IMPORTANT
     });
-
     function submit(e) {
         e.preventDefault();
-        post(route('projects.store'));
+        post(route('projects.store'), {
+            forceFormData: true,
+        });
     }
 
     return (
         <div className="mx-auto max-w-3xl p-6">
-            <PageHeading
-                title="Create New Story Project"
-                description="Add a title and paste your story to get started."
-            />
+            <Head title="Create New Story Project" description="Add a title and paste your story to get started." />
 
             {Object.keys(errors).length > 0 && (
                 <Alert variant="error" title="Please fix the errors below." className="mb-6">
@@ -49,6 +50,37 @@ export default function Create() {
                         <InputError message={errors.title} className="mt-1" />
                     </div>
 
+                    <div className="mt-4">
+                        <InputLabel value="Original Story Language" />
+
+                        <LanguageSelect
+                            languages={languages.filter(
+                                lang => lang.id !== data.language_id
+                            )}
+                            value={data.dub_languages}
+                            onChange={(val) => {
+                                if (val.length <= plan.max_dubbing_languages) {
+                                    setData('dub_languages', val);
+                                }
+                            }}
+                            isMulti={plan.max_dubbing_languages > 1}
+                            placeholder="Select dubbing languages"
+                        />
+
+                        {errors.language_id && (
+                            <div className="text-red-500 text-sm mt-1">
+                                {errors.language_id}
+                            </div>
+                        )}
+                    </div>
+                    {plan.max_dubbing_languages === 1 && (
+                        <p className="text-sm text-yellow-600 mt-1">
+                            Your plan allows only 1 dubbing language.
+                            <a href="/upgrade" className="underline ml-1">
+                                Upgrade Plan
+                            </a>
+                        </p>
+                    )}
                     <div>
                         <InputLabel value="Paste Story" />
                         <textarea

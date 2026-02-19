@@ -18,13 +18,14 @@ class MapSceneCharactersJob implements ShouldQueue
 
     public Scene $scene;
 
+    public $tries = 1;
+    public $timeout = 180;
+
     /**
      * Create a new job instance.
      */
     public function __construct(Scene $scene)
     {
-        // Laravel yaha pura model serialize nahi karta,
-        // sirf model id store hoti hai aur worker pe auto re-fetch hota hai
         $this->scene = $scene;
     }
 
@@ -33,7 +34,6 @@ class MapSceneCharactersJob implements ShouldQueue
      */
     public function handle(OpenAIService $ai): void
     {
-        // Safety — agar summary missing hai to AI call mat karo
         if (!$this->scene || !$this->scene->description) {
             Log::warning('Scene missing description', [
                 'scene_id' => $this->scene?->id
@@ -41,28 +41,31 @@ class MapSceneCharactersJob implements ShouldQueue
             return;
         }
 
-        // Project id nikalna (IMPORTANT — cross project mixing rokne ke liye)
         $projectId = $this->scene->episode->project_id;
 
-        // Project ke characters fetch karo
+        // Fetch only project characters
         $characters = Character::where('project_id', $projectId)
-            ->get(['name', 'description'])
-            ->toArray();
+            ->get(['id', 'name', 'description']);
 
-        if (empty($characters)) {
+        if ($characters->isEmpty()) {
             Log::warning('No characters found for scene', [
                 'scene_id' => $this->scene->id
             ]);
             return;
         }
 
-        // AI se mapping karvao
+        // Prepare allowed names list (case-insensitive)
+        $allowedNames = $characters
+            ->pluck('name')
+            ->map(fn($name) => strtolower(trim($name)))
+            ->toArray();
+
+        // AI mapping call
         $results = $ai->mapSceneCharacters(
             $this->scene->description,
-            $characters
+            $characters->toArray()
         );
 
-        // AI ne galat response diya to crash nahi hona chahiye
         if (!is_array($results)) {
             Log::error('Invalid AI scene-character mapping response', [
                 'scene_id' => $this->scene->id,
@@ -71,34 +74,37 @@ class MapSceneCharactersJob implements ShouldQueue
             return;
         }
 
-        // Re-run safe — purane mappings delete
+        // Re-run safe
         $this->scene->characters()->detach();
 
-        // Save mappings
         foreach ($results as $char) {
 
             if (!isset($char['name'])) {
                 continue;
             }
 
-            $character = Character::where('project_id', $projectId)
-                ->where('name', $char['name'])
-                ->first();
+            $aiName = strtolower(trim($char['name']));
 
-            if (!$character) {
-                Log::warning('Character not matched', [
-                    'scene_id' => $this->scene->id,
-                    'character_name' => $char['name']
-                ]);
+            // 🔥 IMPORTANT: Ignore generic groups
+            if (!in_array($aiName, $allowedNames)) {
                 continue;
             }
 
-            $this->scene->characters()->attach($character->id, [
-                'action' => $char['action'] ?? null
-            ]);
+            $character = $characters
+                ->firstWhere(fn($c) => strtolower($c->name) === $aiName);
+
+            if (!$character) {
+                continue;
+            }
+
+            // Avoid duplicate attach
+            if (!$this->scene->characters()->where('character_id', $character->id)->exists()) {
+                $this->scene->characters()->attach($character->id, [
+                    'action' => $char['action'] ?? null
+                ]);
+            }
         }
 
-        // Optional progress status
         $this->scene->update([
             'status' => 'characters_mapped'
         ]);

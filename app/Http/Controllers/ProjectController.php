@@ -6,10 +6,10 @@ use App\Jobs\ExtractCharactersJob;
 use App\Jobs\GenerateCharacterImagesJob;
 use App\Jobs\GenerateCharacterPromptsJob;
 use App\Jobs\GenerateEpisodesJob;
-use App\Jobs\GenerateScenesJob;
-use App\Models\Character;
+use App\Models\Language;
 use App\Models\Project;
 use App\Models\StoryChunk;
+use App\Services\CreditCalculator;
 use App\Services\StoryChunker;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,38 +28,115 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function show(Project $project)
+    public function show(Project $project, CreditCalculator $creditCalculator)
     {
         if ($project->user_id !== auth()->id()) {
             abort(403);
         }
 
         $project->loadCount(['episodes', 'characters']);
-        $project->load(['episodes' => fn ($q) => $q->orderBy('id')]);
+        $project->load([
+            'episodes' => fn($q) => $q->with(['scenes' => fn($q) => $q->orderBy('scene_number')])->orderBy('id'),
+            'dubLanguages',
+        ]);
+
+        $user = auth()->user();
+        $plan = $user->plan;
+
+        $minutes = $project->video_minutes ?? 5;
+        $reels = $project->reels_per_episode ?? 0;
+        $dubLanguageIds = $project->dubLanguages->pluck('id')->all();
+        $estimatedCredits = $creditCalculator->calculate([
+            'minutes' => $minutes,
+            'quality' => $project->quality ?? '1080p',
+            'reels' => $reels * ($project->episodes_count ?: 1),
+            'dub_languages' => $dubLanguageIds,
+            'intro_song' => $project->intro_song ?? false,
+            'background_music' => $project->background_music ?? false,
+        ]);
 
         return Inertia::render('Projects/Show', [
             'project' => $project,
+            'plan' => $plan,
+            'estimatedCredits' => $estimatedCredits,
+            'creditOptions' => [
+                'video_minutes' => $minutes,
+                'quality' => $project->quality ?? '1080p',
+                'reels_per_episode' => $reels,
+                'dub_languages_count' => count($dubLanguageIds),
+                'intro_song' => $project->intro_song ?? false,
+                'background_music' => $project->background_music ?? false,
+            ],
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('Projects/Create');
+        $languages = Language::active()->aiSupported()->get();
+        return inertia('Projects/Create', [
+            'languages' => Language::active()->get(),
+            'plan' => auth()->user()->plan,
+        ]);
     }
 
     public function store(Request $request, StoryChunker $chunker)
     {
+        $user = auth()->user();
+        $plan = $user->plan;
+
+        if (count($request->dub_languages ?? []) > $plan->max_dubbing_languages) {
+            return back()->withErrors([
+                'dub_languages' => 'Upgrade your plan for more dubbing languages.'
+            ]);
+        }
+
+        if ($request->minutes > $plan->max_video_minutes) {
+            return back()->withErrors([
+                'minutes' => 'Video length exceeds your plan limit.'
+            ]);
+        }
+
+        if ($request->reels > $plan->max_reels_per_episode) {
+            return back()->withErrors([
+                'reels' => 'Upgrade plan for more reels.'
+            ]);
+        }
+
+        if ($request->quality === '4k' && !$plan->allow_4k) {
+            return back()->withErrors([
+                'quality' => '4K available in Pro plan.'
+            ]);
+        }
+        $maxLanguages = $user->plan?->max_dubbing_languages ?? 1;
+
         $request->validate([
-            'title' => 'required|min:3',
-            'story' => 'required|min:500',
+            'title' => 'required|string|max:255',
+            'language_id' => 'required|exists:languages,id',
+            'dub_languages' => 'nullable|array',
+            'dub_languages.*' => 'exists:languages,id',
         ]);
+
+        if (count($request->dub_languages ?? []) > $maxLanguages) {
+            return back()->withErrors([
+                'dub_languages' => "Your plan allows only {$maxLanguages} dubbing language(s). Upgrade your plan."
+            ]);
+        }
 
         $project = Project::create([
             'user_id' => auth()->id(),
             'title' => $request->title,
             'language' => 'hindi',
-            'status' => 'processing'
+            'status' => 'processing',
+            'video_minutes' => $request->minutes ?? 5,
+            'quality' => $request->quality ?? '1080p',
+            'reels_per_episode' => $request->reels ?? 0,
+            'intro_song' => (bool) ($request->intro_song ?? false),
+            'background_music' => (bool) ($request->background_music ?? false),
         ]);
+
+        if ($request->dub_languages) {
+            $project->dubLanguages()->sync($request->dub_languages);
+        }
 
         // SMART CHUNKING
         $chunks = $chunker->chunk($request->story);
