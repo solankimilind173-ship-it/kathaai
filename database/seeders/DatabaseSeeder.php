@@ -11,14 +11,14 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
-     * Order: users → admin → reference data (languages, features, plans).
+     * Order: reference data (languages, features, plans) then users so demo user gets Enterprise plan.
      */
     public function run(): void
     {
-        $this->call(UserSeeder::class);
-        $this->call(AdminSeeder::class);
         $this->call(LanguageSeeder::class);
         $this->call(FeatureDefinitionSeeder::class);
         $this->call(PlanSeeder::class);
+        $this->call(UserSeeder::class);
+        $this->call(AdminSeeder::class);
     }
 }

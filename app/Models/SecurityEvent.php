@@ -15,6 +15,7 @@ class SecurityEvent extends Model
         'ip_address',
         'user_agent',
         'metadata',
+        'created_at',
     ];
 
     protected function casts(): array
