@@ -47,9 +47,7 @@ class UpgradeController extends Controller
         $plan = Plan::findOrFail($request->plan_id);
         $user = $request->user();
 
-        $priceId = $request->interval === 'yearly'
-            ? ($plan->stripe_yearly_price_id ?? config("services.stripe.plans.{$plan->slug}.yearly"))
-            : ($plan->stripe_price_id ?? config("services.stripe.plans.{$plan->slug}.monthly"));
+        $priceId = $plan->getStripePriceIdForInterval($request->interval);
 
         if (empty($priceId)) {
             return redirect()->route('upgrade')
@@ -84,7 +82,7 @@ class UpgradeController extends Controller
 
         $secret = config('services.stripe.secret');
         if (empty($secret)) {
-            return redirect()->route('dashboard')->with('success', 'Thank you for subscribing.');
+            return redirect()->route('upgrade')->withErrors(['session' => 'Stripe is not configured. Subscription could not be verified.']);
         }
 
         Stripe::setApiKey($secret);
@@ -94,6 +92,13 @@ class UpgradeController extends Controller
         } catch (ApiErrorException $e) {
             Log::warning('Stripe session retrieve failed: ' . $e->getMessage());
             return redirect()->route('upgrade')->withErrors(['session' => 'Could not verify payment.']);
+        }
+
+        $subscription = $session->subscription ?? null;
+        $isActive = $subscription && in_array($subscription->status ?? '', ['active', 'trialing'], true);
+
+        if (! $isActive) {
+            return redirect()->route('upgrade')->withErrors(['session' => 'No active subscription found. Payment may still be processing.']);
         }
 
         $planId = $session->metadata->plan_id ?? null;

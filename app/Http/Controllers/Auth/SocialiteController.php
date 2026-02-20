@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -59,12 +60,17 @@ class SocialiteController extends Controller
             return $user;
         }
 
-        $user = User::where('email', $socialUser->getEmail())->first();
-
-        if ($user) {
-            $user->update([$idColumn => $socialUser->getId()]);
-            return $user;
+        $email = $socialUser->getEmail();
+        if ($email !== null && $email !== '') {
+            $user = User::where('email', $email)->first();
+            if ($user) {
+                $user->update([$idColumn => $socialUser->getId()]);
+                return $user;
+            }
         }
+
+        $defaultPlan = Plan::where('is_active', true)->orderBy('price')->first();
+        $initialCredits = $defaultPlan ? (int) ($defaultPlan->monthly_credits ?? 0) : 0;
 
         return User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? explode('@', $socialUser->getEmail() ?? 'user')[0] ?? 'User',
@@ -72,6 +78,8 @@ class SocialiteController extends Controller
             'password' => bcrypt(Str::random(32)),
             $idColumn => $socialUser->getId(),
             'email_verified_at' => now(),
+            'plan_id' => $defaultPlan?->id,
+            'credits' => max(0, $initialCredits),
         ]);
     }
 }

@@ -24,9 +24,16 @@ export default function FlashToaster() {
         else if (flash.status) toast(flash.status, { icon: 'ℹ️' });
     }, [flash.success, flash.error, flash.status]);
 
-    // Validation errors (422 response, same page) – one toast for first error
+    // Validation errors (422 response, same page) – one toast for first error (supports string or array)
     useEffect(() => {
-        const errorEntries = Object.entries(errors).filter(([, v]) => v && typeof v === 'string');
+        const toMessage = (v) => {
+            if (typeof v === 'string') return v;
+            if (Array.isArray(v) && v.length) return typeof v[0] === 'string' ? v[0] : String(v[0]);
+            return null;
+        };
+        const errorEntries = Object.entries(errors)
+            .map(([k, v]) => [k, toMessage(v)])
+            .filter(([, msg]) => msg);
         if (errorEntries.length === 0) {
             prevErrorsKey.current = null;
             return;
@@ -35,8 +42,7 @@ export default function FlashToaster() {
         if (key === prevErrorsKey.current) return;
         prevErrorsKey.current = key;
 
-        const firstMessage = errorEntries[0][1];
-        toast.error(firstMessage);
+        toast.error(errorEntries[0][1]);
     }, [errors]);
 
     return null;

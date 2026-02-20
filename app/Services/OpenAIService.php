@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use OpenAI\Client;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use OpenAI;
 
@@ -11,9 +11,23 @@ class OpenAIService
 {
     protected $client;
 
-    public function __construct()
+    /**
+     * @param  \OpenAI\Contracts\ClientContract|null  $client  Optional for testing; defaults to OpenAI::client().
+     */
+    public function __construct($client = null)
     {
-        $this->client = OpenAI::client(env('OPENAI_API_KEY'));
+        $this->client = $client ?? OpenAI::client(config('services.openai.key'));
+    }
+
+    /**
+     * Safely get content from the first choice. Returns null if choices are empty (e.g. content filter, rate limit).
+     */
+    private function getFirstChoiceContent(object $response): ?string
+    {
+        if (empty($response->choices) || ! isset($response->choices[0]->message->content)) {
+            return null;
+        }
+        return $response->choices[0]->message->content;
     }
 
     public function generateEpisodes(string $story): array
@@ -46,7 +60,11 @@ No markdown. No explanation. Only JSON.
             'temperature' => 0.7,
         ]);
 
-        return json_decode($response->choices[0]->message->content, true);
+        $content = $this->getFirstChoiceContent($response);
+        if ($content === null) {
+            throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
+        }
+        return json_decode($content, true) ?? [];
     }
 
     public function extractCharacters(string $story): array
@@ -84,8 +102,10 @@ Rules:
             'response_format' => ['type' => 'json_object']
         ]);
 
-        $content = $response->choices[0]->message->content;
-
+        $content = $this->getFirstChoiceContent($response);
+        if ($content === null) {
+            throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
+        }
         $data = json_decode($content, true);
 
         return $data['characters'] ?? [];
@@ -123,7 +143,11 @@ Return ONLY the visual description paragraph.
             'temperature' => 0.7
         ]);
 
-        return $response->choices[0]->message->content;
+        $content = $this->getFirstChoiceContent($response);
+        if ($content === null) {
+            throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
+        }
+        return $content;
     }
 
     public function generateCharacterImage(string $prompt, string $filename, int|string $projectId): string
@@ -210,10 +234,10 @@ Rules:
             ]
         ]);
 
-        $content = $response->choices[0]->message->content ?? null;
+        $content = $this->getFirstChoiceContent($response);
 
-        if (!$content) {
-            \Log::error('AI returned empty scene response');
+        if ($content === null || $content === '') {
+            Log::error('AI returned empty scene response');
             return [];
         }
 
@@ -224,7 +248,7 @@ Rules:
         $decoded = json_decode($content, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            \Log::error('Scene JSON decode failed', [
+            Log::error('Scene JSON decode failed', [
                 'error' => json_last_error_msg(),
                 'ai_response' => $content
             ]);
@@ -263,6 +287,10 @@ FORMAT:
             'temperature' => 0.1,
         ]);
 
-        return json_decode($response->choices[0]->message->content, true);
+        $content = $this->getFirstChoiceContent($response);
+        if ($content === null) {
+            throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
+        }
+        return json_decode($content, true) ?? [];
     }
 }

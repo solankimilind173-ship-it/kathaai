@@ -16,9 +16,13 @@ class UserSeeder extends Seeder
     {
         $email = 'kathaai@mailinator.com';
 
-        $enterprise = Plan::where('slug', 'enterprise')->first();
-        $planId = $enterprise?->id;
+        $plan = Plan::where('slug', 'enterprise')->first()
+            ?? Plan::where('is_active', true)->orderByDesc('price')->first();
+        $planId = $plan?->id;
         $credits = 50_000; // Generous testing balance (Enterprise has 10k/month)
+        if ($planId === null) {
+            $this->command?->warn('UserSeeder: No plan found. Run FeatureDefinitionSeeder and PlanSeeder first. Demo user will have plan_id=null.');
+        }
 
         $user = User::where('email', $email)->first();
 

@@ -87,6 +87,17 @@ class Plan extends Model
         return parent::getAttribute($key);
     }
 
+    /**
+     * Resolve Stripe Price ID for checkout (plan column first, then config).
+     */
+    public function getStripePriceIdForInterval(string $interval): ?string
+    {
+        if ($interval === 'yearly') {
+            return $this->stripe_yearly_price_id ?? config("services.stripe.plans.{$this->slug}.yearly");
+        }
+        return $this->stripe_price_id ?? config("services.stripe.plans.{$this->slug}.monthly");
+    }
+
     private function castFeatureValue(string $value, string $type): mixed
     {
         return match ($type) {
