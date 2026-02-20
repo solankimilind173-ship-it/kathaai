@@ -1,5 +1,5 @@
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
-import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -8,7 +8,9 @@ const userNavItems = [
     { href: 'projects.index', label: 'Projects', icon: ProjectIcon },
     { href: 'gallery.index', label: 'Image Gallery', icon: GalleryIcon },
     { href: 'video-gallery.index', label: 'Video Gallery', icon: VideoGalleryIcon },
+    { href: 'billing.index', label: 'Billing & usage', icon: BillingIcon },
     { href: 'upgrade', label: 'Upgrade', icon: SubscriptionIcon },
+    { href: 'help.index', label: 'Help', icon: HelpIcon },
 ];
 
 const adminNavItems = [
@@ -57,6 +59,22 @@ function SubscriptionIcon({ className = 'h-5 w-5' }) {
     return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+        </svg>
+    );
+}
+
+function BillingIcon({ className = 'h-5 w-5' }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75h19.5m-18-18v18m18-18v18m-18-2.25h19.5M2.25 6h19.5" />
+        </svg>
+    );
+}
+
+function HelpIcon({ className = 'h-5 w-5' }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
         </svg>
     );
 }
@@ -130,7 +148,9 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
         if (routeName === 'projects.index') return url.startsWith('/projects') && !url.startsWith('/admin');
         if (routeName === 'gallery.index') return url.startsWith('/gallery') && !url.startsWith('/video-gallery');
         if (routeName === 'video-gallery.index') return url.startsWith('/video-gallery');
+        if (routeName === 'billing.index') return url.startsWith('/billing');
         if (routeName === 'upgrade') return url.startsWith('/upgrade');
+        if (routeName === 'help.index') return url.startsWith('/help');
         return false;
     };
 
@@ -183,53 +203,74 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
             </nav>
 
             <div className={`border-t border-amber-200/50 p-3 ${collapsed ? 'flex justify-center' : ''}`}>
-                <Dropdown>
-                    <Dropdown.Trigger>
-                        <button
-                            type="button"
-                            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-300 ${
-                                collapsed ? 'justify-center' : ''
-                            }`}
-                        >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-amber-900">
-                                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                <Menu as="div" className="relative">
+                    <MenuButton
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-300 data-[active]:bg-amber-50 ${
+                            collapsed ? 'justify-center' : ''
+                        }`}
+                    >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-amber-900">
+                            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                        {!collapsed && (
+                            <div className="min-w-0 flex-1 truncate">
+                                <p className="font-medium text-stone-800">{user?.name}</p>
+                                <p className="truncate text-xs text-stone-500">{user?.email}</p>
                             </div>
-                            {!collapsed && (
-                                <div className="min-w-0 flex-1 truncate">
-                                    <p className="font-medium text-stone-800">{user?.name}</p>
-                                    <p className="truncate text-xs text-stone-500">{user?.email}</p>
-                                </div>
-                            )}
-                            {!collapsed && (
-                                <svg className="h-4 w-4 shrink-0 text-stone-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            )}
-                        </button>
-                    </Dropdown.Trigger>
-                    <Dropdown.Content align="left" contentClasses="py-1 bg-white border border-amber-200/50 rounded-lg shadow-xl min-w-[12rem]">
+                        )}
+                        {!collapsed && (
+                            <svg className="h-4 w-4 shrink-0 text-stone-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                    </MenuButton>
+                    <MenuItems
+                        anchor="bottom start"
+                        className="z-[101] mt-2 min-w-[12rem] origin-top-left rounded-lg border border-amber-200/50 bg-white py-1 shadow-xl focus:outline-none"
+                    >
                         {isAdmin && !url.startsWith('/admin') && (
-                            <Dropdown.Link href={route('admin.dashboard')} className="text-stone-700 hover:bg-amber-50">
-                                Admin
-                            </Dropdown.Link>
+                            <MenuItem>
+                                <Link
+                                    href={route('admin.dashboard')}
+                                    className="block px-4 py-2 text-sm text-stone-700 data-[focus]:bg-amber-50"
+                                >
+                                    Admin
+                                </Link>
+                            </MenuItem>
                         )}
-                        {isAdmin && url.startsWith('/admin') && (
-                            <Dropdown.Link href={route('dashboard')} className="text-stone-700 hover:bg-amber-50">
-                                User dashboard
-                            </Dropdown.Link>
+                        {!url.startsWith('/admin') && (
+                            <>
+                                <MenuItem>
+                                    <Link
+                                        href={route('profile.edit')}
+                                        className="block px-4 py-2 text-sm text-stone-700 data-[focus]:bg-amber-50"
+                                    >
+                                        Profile
+                                    </Link>
+                                </MenuItem>
+                                <MenuItem>
+                                    <Link
+                                        href={route('settings.index')}
+                                        className="block px-4 py-2 text-sm text-stone-700 data-[focus]:bg-amber-50"
+                                    >
+                                        Settings
+                                    </Link>
+                                </MenuItem>
+                                <div className="my-1 border-t border-amber-200/60" aria-hidden />
+                            </>
                         )}
-                        <Dropdown.Link href={route('profile.edit')} className="text-stone-700 hover:bg-amber-50">
-                            Profile
-                        </Dropdown.Link>
-                        <Dropdown.Link href={route('settings.index')} className="text-stone-700 hover:bg-amber-50">
-                            Settings
-                        </Dropdown.Link>
-                        <div className="my-1 border-t border-amber-200/60" aria-hidden />
-                        <Dropdown.Link method="post" href={route('logout')} as="button" className="text-stone-700 hover:bg-amber-50 text-left w-full">
-                            Logout
-                        </Dropdown.Link>
-                    </Dropdown.Content>
-                </Dropdown>
+                        <MenuItem>
+                            <Link
+                                method="post"
+                                href={route('logout')}
+                                as="button"
+                                className="block w-full px-4 py-2 text-left text-sm text-stone-700 data-[focus]:bg-amber-50"
+                            >
+                                Logout
+                            </Link>
+                        </MenuItem>
+                    </MenuItems>
+                </Menu>
             </div>
         </aside>
     );

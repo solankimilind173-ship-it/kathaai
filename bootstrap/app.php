@@ -18,13 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'user' => \App\Http\Middleware\EnsureUserIsRegular::class,
             'suspended' => \App\Http\Middleware\EnsureUserNotSuspended::class,
+            'password.confirm' => \App\Http\Middleware\EnsurePasswordConfirmed::class,
         ]);
 
         // Unauthenticated users (e.g. hitting Dashboard or Projects) → login
         $middleware->redirectGuestsTo('/login');
 
-        // Authenticated users visiting login/register → Dashboard
+        // Authenticated users visiting login/register → redirect by role in controllers
         $middleware->redirectUsersTo('/dashboard');
     })
     ->withExceptions(function (Exceptions $exceptions): void {

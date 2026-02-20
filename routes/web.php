@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\BillingController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShareController;
@@ -12,7 +14,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect('/dashboard');
+        $role = auth()->user()->role ?? 'user';
+        return redirect(in_array($role, ['admin', 'super_admin'], true) ? route('admin.dashboard') : '/dashboard');
     }
     return redirect()->route('login');
 });
@@ -27,7 +30,7 @@ Route::get('/share/{token}', [ShareController::class, 'show'])->name('share.show
 // -----------------------------------------------------------------------------
 
 Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified', 'suspended'])
+    ->middleware(['auth', 'verified', 'suspended', 'user'])
     ->name('dashboard');
 
 // -----------------------------------------------------------------------------
@@ -42,8 +45,10 @@ Route::middleware(['auth', 'suspended', 'role', 'throttle:60,1'])->prefix('admin
 // Authenticated: profile
 // -----------------------------------------------------------------------------
 
-Route::middleware(['auth', 'suspended'])->group(function () {
+Route::middleware(['auth', 'suspended', 'user'])->group(function () {
     Route::get('log-viewer', '\Rap2hpoutre\LaravelLogViewer\LogViewerController@index');
+    Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::get('/help', [HelpController::class, 'index'])->name('help.index');
     Route::get('/upgrade', [UpgradeController::class, 'index'])->name('upgrade');
     Route::post('/upgrade/checkout', [UpgradeController::class, 'checkout'])->name('upgrade.checkout');
     Route::get('/upgrade/success', [UpgradeController::class, 'success'])->name('upgrade.success');
@@ -51,13 +56,22 @@ Route::middleware(['auth', 'suspended'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::get('/settings/two-factor/setup', [SettingsController::class, 'twoFactorSetup'])->name('settings.two-factor.setup')->middleware('password.confirm');
+    Route::post('/settings/two-factor/confirm', [SettingsController::class, 'confirmTwoFactor'])->name('settings.two-factor.confirm');
+    Route::post('/settings/two-factor/cancel', [SettingsController::class, 'cancelTwoFactorSetup'])->name('settings.two-factor.cancel');
+    Route::get('/settings/two-factor/disable', [SettingsController::class, 'showDisableTwoFactor'])->name('settings.two-factor.disable')->middleware('password.confirm');
+    Route::post('/settings/two-factor/disable', [SettingsController::class, 'disableTwoFactor'])->name('settings.two-factor.disable.post')->middleware('password.confirm');
+    Route::post('/settings/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
+    Route::get('/settings/sessions/revoke', [SettingsController::class, 'showRevokeSessions'])->name('settings.sessions.revoke')->middleware('password.confirm');
+    Route::post('/settings/sessions/revoke', [SettingsController::class, 'revokeSessions'])->name('settings.sessions.revoke.post')->middleware('password.confirm');
+    Route::get('/settings/export', [SettingsController::class, 'exportData'])->name('settings.export')->middleware(['password.confirm', 'throttle:3,1']);
 });
 
 // -----------------------------------------------------------------------------
 // Authenticated: gallery, projects
 // -----------------------------------------------------------------------------
 
-Route::middleware(['auth', 'suspended'])->group(function () {
+Route::middleware(['auth', 'suspended', 'user'])->group(function () {
     Route::get('/gallery', [App\Http\Controllers\ImageGalleryController::class, 'index'])->name('gallery.index');
     Route::get('/gallery/character-image/{character}', [App\Http\Controllers\ImageGalleryController::class, 'characterImage'])->name('gallery.character-image');
     Route::get('/video-gallery', [App\Http\Controllers\VideoGalleryController::class, 'index'])->name('video-gallery.index');

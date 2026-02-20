@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\SecurityEventService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,9 +40,23 @@ class AuthenticatedSessionController extends Controller
             return back()->withErrors(['email' => 'This account has been suspended.']);
         }
 
+        if ($user->hasTwoFactorEnabled()) {
+            $request->session()->put('two_factor.user_id', $user->id);
+            $request->session()->put('two_factor.remember', $request->boolean('remember'));
+            Auth::guard('web')->logout();
+            return redirect()->route('two-factor.challenge');
+        }
+
         $request->session()->regenerate();
 
-        return redirect()->to('/dashboard');
+        app(SecurityEventService::class)->log($user, SecurityEventService::LOGIN, $request);
+
+        $role = $user->role ?? 'user';
+        if (in_array($role, ['admin', 'super_admin'], true)) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**
@@ -49,6 +64,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        if ($user) {
+            app(SecurityEventService::class)->log($user, SecurityEventService::LOGOUT, $request);
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

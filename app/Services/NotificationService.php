@@ -18,6 +18,9 @@ class NotificationService
      */
     public function sendWelcomeEmail(User $user): void
     {
+        if (!$user->getPreference(User::PREF_EMAIL_WELCOME, true)) {
+            return;
+        }
         $recipient = $user->email;
         $subject = 'Welcome to ' . config('app.name');
 
@@ -34,6 +37,9 @@ class NotificationService
      */
     public function sendPasswordChangedEmail(User $user, ?string $location = null, ?string $deviceId = null): void
     {
+        if (!$user->getPreference(User::PREF_EMAIL_PASSWORD_CHANGED, true)) {
+            return;
+        }
         $recipient = $user->email;
         $subject = 'Your password was changed – ' . config('app.name');
 
@@ -53,6 +59,9 @@ class NotificationService
      */
     public function sendProjectStepCompleted(User $user, Project $project, string $stepName, string $stepDescription): void
     {
+        if (!$user->getPreference(User::PREF_EMAIL_PROJECT_STEP, true)) {
+            return;
+        }
         $recipient = $user->email;
         $subject = 'Project step completed: ' . $stepName . ' – ' . $project->title;
 

@@ -3,6 +3,7 @@ import Card from '@/Components/Card';
 import Badge from '@/Components/Badge';
 import EmptyState from '@/Components/EmptyState';
 import PageHeading from '@/Components/PageHeading';
+import PaginationLinks from '@/Components/PaginationLinks';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
@@ -366,28 +367,14 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                                     <p className="text-sm text-gray-600">
                                         Showing {pagination.from}–{pagination.to} of {pagination.total}
                                     </p>
-                                    <div className="flex gap-1">
-                                        {pagination.links?.map((link, i) => (
-                                            <span key={i}>
-                                                {link.url ? (
-                                                    <Link
-                                                        href={link.url}
-                                                        className={`inline-flex rounded border px-3 py-1 text-sm ${
-                                                            link.active
-                                                                ? 'border-indigo-500 bg-indigo-50 font-medium text-indigo-600'
-                                                                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
-                                                        }`}
-                                                    >
-                                                        {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
-                                                    </Link>
-                                                ) : (
-                                                    <span className="inline-flex cursor-default rounded border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-400">
-                                                        {link.label.replace('&laquo;', '«').replace('&raquo;', '»')}
-                                                    </span>
-                                                )}
-                                            </span>
-                                        ))}
-                                    </div>
+                                    <PaginationLinks
+                                        links={pagination.links}
+                                        linkClass="inline-flex items-center rounded border px-3 py-1 text-sm"
+                                        activeClass="border-indigo-500 bg-indigo-50 font-medium text-indigo-600"
+                                        inactiveClass="border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                                        disabledClass="border-gray-200 bg-gray-50 text-gray-400"
+                                        wrapperClass="flex gap-1"
+                                    />
                                 </div>
                             )}
                         </>

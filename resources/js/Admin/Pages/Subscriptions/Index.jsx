@@ -1,6 +1,7 @@
 import AdminLayout from '@/Admin/Layout/AdminLayout';
 import Card from '@/Components/Card';
 import Table from '@/Components/Table';
+import PaginationLinks from '@/Components/PaginationLinks';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Badge from '@/Components/Badge';
@@ -18,13 +19,13 @@ export default function AdminSubscriptionsIndex({ plans, filters }) {
         {
             key: 'price',
             label: 'Monthly',
-            render: (row) => (row.price != null ? `$${Number(row.price).toFixed(2)}` : '—'),
+            render: (row) => (row.price != null ? `₹${Number(row.price).toFixed(2)}` : '—'),
         },
         {
             key: 'yearly_price',
             label: 'Yearly',
             render: (row) =>
-                row.yearly_price != null ? `$${Number(row.yearly_price).toFixed(2)}` : '—',
+                row.yearly_price != null ? `₹${Number(row.yearly_price).toFixed(2)}` : '—',
         },
         { key: 'monthly_credits', label: 'Credits/mo' },
         {
@@ -122,20 +123,8 @@ export default function AdminSubscriptionsIndex({ plans, filters }) {
                 <Table columns={columns} data={data} emptyMessage="No plans configured." />
 
                 {plans?.links && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {plans.links.map((link, i) => (
-                            <Link
-                                key={i}
-                                href={link.url ?? '#'}
-                                className={`rounded-lg border px-3 py-1.5 text-sm ${
-                                    link.active
-                                        ? 'border-amber-400 bg-amber-100 text-amber-900'
-                                        : 'border-amber-200/60 bg-white text-stone-700 hover:bg-amber-50'
-                                }`}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                    <div className="mt-4">
+                        <PaginationLinks links={plans.links} />
                     </div>
                 )}
             </Card>

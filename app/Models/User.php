@@ -31,7 +31,27 @@ class User extends Authenticatable
         'plan_id',
         'credits',
         'suspended_at',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'preferences',
     ];
+
+    /** Default notification preferences (when not set). */
+    public const PREF_EMAIL_WELCOME = 'email_welcome';
+    public const PREF_EMAIL_PASSWORD_CHANGED = 'email_password_changed';
+    public const PREF_EMAIL_PROJECT_STEP = 'email_project_step';
+
+    public function getPreference(string $key, mixed $default = true): mixed
+    {
+        $prefs = $this->preferences ?? [];
+        return array_key_exists($key, $prefs) ? $prefs[$key] : $default;
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return !empty($this->two_factor_confirmed_at);
+    }
 
     public function projects()
     {
@@ -73,6 +93,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -86,6 +108,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'suspended_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
+            'preferences' => 'array',
         ];
     }
 }

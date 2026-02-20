@@ -136,7 +136,7 @@ export default function AdminSubscriptionsEdit({ plan, featureDefinitions = [], 
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <InputLabel value="Monthly price ($)" />
+                            <InputLabel value="Monthly price (₹ INR)" />
                             <TextInput
                                 type="number"
                                 step="0.01"
@@ -148,7 +148,7 @@ export default function AdminSubscriptionsEdit({ plan, featureDefinitions = [], 
                             <InputError message={errors.price} />
                         </div>
                         <div>
-                            <InputLabel value="Yearly price ($) – optional" />
+                            <InputLabel value="Yearly price (₹ INR) – optional" />
                             <TextInput
                                 type="number"
                                 step="0.01"

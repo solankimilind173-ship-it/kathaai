@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/Card';
 import Badge from '@/Components/Badge';
@@ -6,6 +6,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import CreditsPieChart from '@/Components/CreditsPieChart';
 import SubscriptionModal from '@/Components/SubscriptionModal';
 import { Head, Link } from '@inertiajs/react';
+
+const TIPS_DISMISSED_KEY = 'kathaai_dashboard_tips_dismissed';
 
 function statusVariant(status) {
     const map = { draft: 'draft', processing: 'pending', completed: 'completed' };
@@ -27,6 +29,23 @@ export default function Dashboard({
     plan,
 }) {
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+    const [tipsDismissed, setTipsDismissed] = useState(true);
+
+    useEffect(() => {
+        try {
+            setTipsDismissed(localStorage.getItem(TIPS_DISMISSED_KEY) === '1');
+        } catch {
+            setTipsDismissed(false);
+        }
+    }, []);
+
+    const showTips = !tipsDismissed && latestProjects.length < 3;
+    const dismissTips = () => {
+        try {
+            localStorage.setItem(TIPS_DISMISSED_KEY, '1');
+            setTipsDismissed(true);
+        } catch (_) {}
+    };
 
     return (
         <AuthenticatedLayout
@@ -39,6 +58,41 @@ export default function Dashboard({
             <Head title="Dashboard" />
 
             <div className="space-y-8">
+                {/* Getting started tips */}
+                {showTips && (
+                    <Card className="border-amber-300/40 bg-amber-50/60 relative">
+                        <button
+                            type="button"
+                            onClick={dismissTips}
+                            className="absolute right-3 top-3 rounded p-1 text-stone-400 hover:bg-amber-200/40 hover:text-stone-600"
+                            aria-label="Dismiss"
+                        >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <h3 className="font-display text-lg font-semibold text-stone-900 pr-8">Getting started</h3>
+                        <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-stone-600">
+                            <li>Create a project and add your story to generate episodes and scenes.</li>
+                            <li>Use credits for AI generation and video rendering; check usage under <Link href={route('billing.index')} className="font-medium text-amber-600 hover:text-amber-700">Billing &amp; usage</Link>.</li>
+                            <li>Subscribe via <Link href={route('upgrade')} className="font-medium text-amber-600 hover:text-amber-700">Upgrade</Link> to get monthly credits and unlock more features.</li>
+                            <li>Need help? Visit the <Link href={route('help.index')} className="font-medium text-amber-600 hover:text-amber-700">Help</Link> page for FAQs.</li>
+                        </ul>
+                        <div className="mt-4 flex gap-3">
+                            <Link href={route('projects.create')}>
+                                <PrimaryButton>Create a project</PrimaryButton>
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={dismissTips}
+                                className="rounded-lg border border-amber-200/60 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-amber-100/80"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Analytics */}
                 <section>
                     <h3 className="font-display mb-4 text-lg font-semibold text-stone-800">

@@ -34,7 +34,12 @@ class SocialiteController extends Controller
 
         Auth::login($user, true);
 
-        return redirect()->intended('/dashboard');
+        $role = $user->role ?? 'user';
+        if (in_array($role, ['admin', 'super_admin'], true)) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     protected function validateProvider(string $provider): void

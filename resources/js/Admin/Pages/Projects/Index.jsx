@@ -1,4 +1,5 @@
 import AdminLayout from '@/Admin/Layout/AdminLayout';
+import PaginationLinks from '@/Components/PaginationLinks';
 import Card from '@/Components/Card';
 import Table from '@/Components/Table';
 import Badge from '@/Components/Badge';
@@ -200,20 +201,8 @@ export default function AdminProjectsIndex({
                 <Table columns={columns} data={data} emptyMessage="No projects." />
 
                 {projects?.links && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {projects.links.map((link, i) => (
-                            <Link
-                                key={i}
-                                href={link.url ?? '#'}
-                                className={`rounded-lg border px-3 py-1.5 text-sm ${
-                                    link.active
-                                        ? 'border-amber-400 bg-amber-100 text-amber-900'
-                                        : 'border-amber-200/60 bg-white text-stone-700 hover:bg-amber-50'
-                                }`}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                    <div className="mt-4">
+                        <PaginationLinks links={projects.links} />
                     </div>
                 )}
             </Card>

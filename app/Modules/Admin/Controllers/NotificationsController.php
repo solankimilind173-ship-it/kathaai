@@ -31,7 +31,7 @@ class NotificationsController extends Controller
 
         $notifications = $query->paginate((int) $request->get('per_page', 20))->withQueryString();
 
-        return Inertia::render('Admin/Pages/Notifications/Index', [
+        return Inertia::render('Admin/Notifications/Index', [
             'notifications' => $notifications,
             'filters' => [
                 'type' => $request->type,

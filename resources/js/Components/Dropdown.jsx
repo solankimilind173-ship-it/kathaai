@@ -21,15 +21,34 @@ const Dropdown = ({ children }) => {
 const Trigger = ({ children }) => {
     const { open, setOpen, toggleOpen } = useContext(DropDownContext);
 
+    const handleClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleOpen();
+    };
+
     return (
         <>
-            <div onClick={toggleOpen}>{children}</div>
+            {typeof children === 'function' ? (
+                children({ open, toggleOpen, setOpen })
+            ) : (
+                <div
+                    className="cursor-pointer"
+                    onClick={handleClick}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(); } }}
+                    role="button"
+                    tabIndex={0}
+                >
+                    {children}
+                </div>
+            )}
 
             {open && (
                 <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-[100]"
                     onClick={() => setOpen(false)}
-                ></div>
+                    aria-hidden
+                />
             )}
         </>
     );
@@ -69,7 +88,7 @@ const Content = ({
                 leaveTo="opacity-0 scale-95"
             >
                 <div
-                    className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
+                    className={`absolute z-[101] mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
                     onClick={() => setOpen(false)}
                 >
                     <div
