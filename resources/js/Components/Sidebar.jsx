@@ -8,6 +8,7 @@ const userNavItems = [
     { href: 'projects.index', label: 'Projects', icon: ProjectIcon },
     { href: 'gallery.index', label: 'Image Gallery', icon: GalleryIcon },
     { href: 'video-gallery.index', label: 'Video Gallery', icon: VideoGalleryIcon },
+    { href: 'upgrade', label: 'Upgrade', icon: SubscriptionIcon },
 ];
 
 const adminNavItems = [
@@ -15,6 +16,7 @@ const adminNavItems = [
     { href: 'admin.subscriptions.index', label: 'Subscriptions', icon: SubscriptionIcon },
     { href: 'admin.users.index', label: 'Users', icon: UsersIcon },
     { href: 'admin.projects.index', label: 'Projects', icon: ProjectIcon },
+    { href: 'admin.notifications.index', label: 'Notifications', icon: NotificationIcon },
     { href: 'admin.analytics.index', label: 'Analytics', icon: AnalyticsIcon },
 ];
 
@@ -67,6 +69,14 @@ function UsersIcon({ className = 'h-5 w-5' }) {
     );
 }
 
+function NotificationIcon({ className = 'h-5 w-5' }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+    );
+}
+
 function AnalyticsIcon({ className = 'h-5 w-5' }) {
     return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -115,10 +125,12 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
         if (routeName === 'admin.subscriptions.index') return url.startsWith('/admin/subscriptions');
         if (routeName === 'admin.users.index') return url.startsWith('/admin/users');
         if (routeName === 'admin.projects.index') return url.startsWith('/admin/projects');
+        if (routeName === 'admin.notifications.index') return url.startsWith('/admin/notifications');
         if (routeName === 'admin.analytics.index') return url.startsWith('/admin/analytics');
         if (routeName === 'projects.index') return url.startsWith('/projects') && !url.startsWith('/admin');
         if (routeName === 'gallery.index') return url.startsWith('/gallery') && !url.startsWith('/video-gallery');
         if (routeName === 'video-gallery.index') return url.startsWith('/video-gallery');
+        if (routeName === 'upgrade') return url.startsWith('/upgrade');
         return false;
     };
 

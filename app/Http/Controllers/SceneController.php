@@ -6,6 +6,7 @@ use App\Jobs\RegenerateSceneImageJob;
 use App\Jobs\RegenerateSceneVoiceJob;
 use App\Models\Scene;
 use App\Services\CreditService;
+use App\Services\RegenerationLimitService;
 use Illuminate\Http\Request;
 
 class SceneController extends Controller
@@ -25,7 +26,7 @@ class SceneController extends Controller
     {
         $scene->load('episode.project');
         if ($scene->episode->project->user_id !== auth()->id()) {
-            abort(403);
+            abort(404);
         }
 
         $request->validate([
@@ -40,12 +41,19 @@ class SceneController extends Controller
         return back()->with('success', 'Scene updated.');
     }
 
-    public function regenerateImage(Scene $scene, CreditService $creditService)
+    public function regenerateImage(Scene $scene, CreditService $creditService, RegenerationLimitService $regenerationLimit)
     {
         $scene->load('episode.project');
         $project = $scene->episode->project;
         if ($project->user_id !== auth()->id()) {
-            abort(403);
+            abort(404);
+        }
+        if ($project->is_archived) {
+            abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
+        }
+
+        if (! $regenerationLimit->canRegenerateSceneImage($scene)) {
+            return back()->withErrors(['regeneration' => $regenerationLimit->limitReachedMessage('scene_image')]);
         }
 
         $user = auth()->user();
@@ -55,6 +63,7 @@ class SceneController extends Controller
             ]);
         }
 
+        $regenerationLimit->recordSceneImageRegeneration($scene);
         $creditService->deductForSceneImage($user, $scene);
 
         $scene->update(['status' => 'regenerating_image']);
@@ -63,12 +72,19 @@ class SceneController extends Controller
         return redirect()->route('projects.show', $project)->with('success', 'Scene image regeneration started.');
     }
 
-    public function regenerateVoice(Scene $scene, CreditService $creditService)
+    public function regenerateVoice(Scene $scene, CreditService $creditService, RegenerationLimitService $regenerationLimit)
     {
         $scene->load('episode.project');
         $project = $scene->episode->project;
         if ($project->user_id !== auth()->id()) {
-            abort(403);
+            abort(404);
+        }
+        if ($project->is_archived) {
+            abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
+        }
+
+        if (! $regenerationLimit->canRegenerateSceneVoice($scene)) {
+            return back()->withErrors(['regeneration' => $regenerationLimit->limitReachedMessage('scene_voice')]);
         }
 
         $user = auth()->user();
@@ -78,6 +94,7 @@ class SceneController extends Controller
             ]);
         }
 
+        $regenerationLimit->recordSceneVoiceRegeneration($scene);
         $creditService->deductForSceneVoice($user, $scene);
 
         $scene->update(['status' => 'regenerating_voice']);

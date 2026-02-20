@@ -10,12 +10,18 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class GenerateEpisodesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $project;
+
+    public int $tries = 2;
+
+    public int $timeout = 300;
 
     public function __construct(Project $project)
     {
@@ -24,25 +30,49 @@ class GenerateEpisodesJob implements ShouldQueue
 
     public function handle(OpenAIService $ai)
     {
-        $story = $this->project->chunks()
-            ->orderBy('chunk_order')
-            ->pluck('chunk_text')
-            ->implode("\n");
+        $project = $this->project->fresh();
+        if (! $project) {
+            return;
+        }
 
-        $episodes = $ai->generateEpisodes($story);
+        try {
+            $story = $project->chunks()
+                ->orderBy('chunk_order')
+                ->pluck('chunk_text')
+                ->implode("\n");
 
-        $episodeNumber = (int) Episode::where('project_id', $this->project->id)->max('episode_number') + 1;
+            $episodes = $ai->generateEpisodes($story);
 
-        foreach ($episodes as $ep) {
-            $episode = Episode::create([
-                'project_id'        => $this->project->id,
-                'title'             => $ep['title'],
-                'episode_number'    => $episodeNumber++,
-                'summary'           => $ep['summary'],
-                'status'            => 'episode_generated',
+            $episodeNumber = (int) Episode::where('project_id', $project->id)->max('episode_number') + 1;
+
+            foreach ($episodes as $ep) {
+                $episode = Episode::create([
+                    'project_id'        => $project->id,
+                    'title'             => $ep['title'],
+                    'episode_number'    => $episodeNumber++,
+                    'summary'           => $ep['summary'],
+                    'status'            => 'episode_generated',
+                ]);
+
+                GenerateScenesJob::dispatch($episode);
+            }
+
+            $project->load('user');
+            if ($project->user) {
+                app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                    $project->user,
+                    $project,
+                    'Episodes generated',
+                    'Episodes have been created and scene generation has been queued for each.'
+                );
+            }
+        } catch (Throwable $e) {
+            Log::error('GenerateEpisodesJob failed', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
-
-            GenerateScenesJob::dispatch($episode);
+            $project->update(['status' => \App\Enums\ProjectStatus::Failed]);
         }
     }
 }

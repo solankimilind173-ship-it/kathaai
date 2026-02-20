@@ -39,6 +39,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     const { data, setData, get } = useForm({
+        archived: filters.archived ?? false,
         search: filters.search ?? '',
         status: filters.status ?? '',
         date_from: filters.date_from ?? '',
@@ -49,11 +50,20 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
 
     const applyFilters = (e) => {
         e?.preventDefault();
-        get(route('projects.index'), { preserveState: true });
+        router.get(route('projects.index'), {
+            archived: data.archived ? '1' : undefined,
+            search: data.search || undefined,
+            status: data.status || undefined,
+            date_from: data.date_from || undefined,
+            date_to: data.date_to || undefined,
+            sort: data.sort,
+            dir: data.dir,
+        }, { preserveState: true });
     };
 
     const clearFilters = () => {
         setData({
+            archived: false,
             search: '',
             status: '',
             date_from: '',
@@ -63,6 +73,8 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
         });
         router.get(route('projects.index'));
     };
+
+    const handleRestore = (project) => router.patch(route('projects.restore', project));
 
     const handleSort = (field) => {
         const nextDir = data.sort === field && data.dir === 'desc' ? 'asc' : 'desc';
@@ -83,7 +95,8 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
 
     const items = projects.data ?? projects;
     const pagination = projects.data ? projects : null;
-    const hasFilters = data.search || data.status || data.date_from || data.date_to;
+    const showArchived = !!data.archived;
+    const hasFilters = data.search || data.status || data.date_from || data.date_to || data.archived;
 
     return (
         <AuthenticatedLayout
@@ -115,6 +128,23 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                             </Link>
                         }
                     />
+
+                    <div className="mb-4 flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => router.get(route('projects.index'), { ...filters, archived: false }, { preserveState: true })}
+                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${!showArchived ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                        >
+                            Active
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => router.get(route('projects.index'), { ...filters, archived: true }, { preserveState: true })}
+                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${showArchived ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                        >
+                            Archived
+                        </button>
+                    </div>
 
                     <Card className="mb-6">
                         <form onSubmit={applyFilters} className="space-y-4">
@@ -278,20 +308,31 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                                                                     View
                                                                 </SecondaryButton>
                                                             </Link>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleClone(project)}
-                                                                className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                                                            >
-                                                                Clone
-                                                            </button>
-                                                            {project.status !== 'archived' && (
+                                                            {!project.is_archived && (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleClone(project)}
+                                                                        className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                                    >
+                                                                        Clone
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleArchive(project)}
+                                                                        className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                                                                    >
+                                                                        Archive
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {project.is_archived && (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleArchive(project)}
-                                                                    className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                                                                    onClick={() => handleRestore(project)}
+                                                                    className="rounded border border-green-300 bg-green-50 px-2 py-1.5 text-xs font-medium text-green-800 hover:bg-green-100"
                                                                 >
-                                                                    Archive
+                                                                    Restore
                                                                 </button>
                                                             )}
                                                             {deleteConfirm === project.id ? (

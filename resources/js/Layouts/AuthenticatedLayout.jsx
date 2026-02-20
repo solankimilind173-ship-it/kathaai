@@ -1,3 +1,4 @@
+import ApplicationLogo from '@/Components/ApplicationLogo';
 import Sidebar from '@/Components/Sidebar';
 import { Link } from '@inertiajs/react';
 import { useState } from 'react';
@@ -40,8 +41,9 @@ export default function AuthenticatedLayout({ header, children }) {
                         )}
                     </svg>
                 </button>
-                <Link href="/" className="font-display text-lg font-semibold text-amber-900">
-                    KATHAAI
+                <Link href="/" className="flex items-center gap-2">
+                    <ApplicationLogo className="h-8 w-auto shrink-0" />
+                    <span className="font-display text-lg font-semibold text-amber-900">KATHAAI</span>
                 </Link>
             </div>
 

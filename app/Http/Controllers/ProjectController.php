@@ -6,11 +6,19 @@ use App\Enums\ProjectStatus;
 use App\Enums\SourceType;
 use App\Jobs\GenerateProjectStructureJob;
 use App\Models\Book;
+use App\Models\Character;
+use App\Models\Episode;
 use App\Models\Language;
 use App\Models\Project;
+use App\Models\ProjectEngagement;
+use App\Models\ProjectShareToken;
+use App\Models\Scene;
+use App\Models\SceneRenderSettings;
 use App\Services\CreditCalculator;
 use App\Services\CreditService;
+use App\Services\ProjectAnalyticsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -20,6 +28,12 @@ class ProjectController extends Controller
         $query = Project::query()
             ->where('user_id', auth()->id())
             ->withCount(['episodes', 'characters', 'scenes']);
+
+        if ($request->boolean('archived')) {
+            $query->archived();
+        } else {
+            $query->notArchived();
+        }
 
         if ($request->filled('search')) {
             $query->where('title', 'like', '%' . $request->search . '%');
@@ -49,6 +63,7 @@ class ProjectController extends Controller
         return Inertia::render('Projects/Index', [
             'projects' => $projects,
             'filters' => [
+                'archived' => $request->boolean('archived'),
                 'search' => $request->get('search'),
                 'status' => $request->get('status'),
                 'date_from' => $request->get('date_from'),
@@ -60,17 +75,14 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function show(Project $project, CreditCalculator $creditCalculator, CreditService $creditService)
+    public function show(Project $project, CreditCalculator $creditCalculator, CreditService $creditService, ProjectAnalyticsService $projectAnalyticsService)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
-
         $project->loadCount(['episodes', 'characters', 'scenes']);
         $project->load([
             'episodes' => fn ($q) => $q->with(['scenes' => fn ($q) => $q->orderBy('scene_number')])->orderBy('episode_number'),
             'characters',
             'dubLanguages',
+            'shareToken',
             'renderLogs' => fn ($q) => $q->with('episode:id,title')->latest()->limit(100),
         ]);
 
@@ -90,10 +102,21 @@ class ProjectController extends Controller
         ]);
 
         $timeline = $this->buildProjectTimeline($project);
+        $projectAnalytics = $projectAnalyticsService->getAnalytics($project);
+
+        $shareToken = $project->is_public ? $project->shareToken : null;
+        $shareUrl = $shareToken ? route('share.show', $shareToken->token) : null;
+        $project->loadCount(['renderRunLogs as failed_render_count' => fn ($q) => $q->where('status', 'failed')]);
+        $hasFailedRender = ($project->failed_render_count ?? 0) > 0;
+
+        ProjectEngagement::incrementFor($project, 'view_count');
 
         return Inertia::render('Projects/Show', [
             'project' => $project,
+            'shareUrl' => $shareUrl,
+            'hasFailedRender' => $hasFailedRender,
             'plan' => $plan,
+            'projectAnalytics' => $projectAnalytics,
             'estimatedCredits' => $estimatedCredits,
             'creditOptions' => [
                 'video_minutes' => $minutes,
@@ -111,6 +134,35 @@ class ProjectController extends Controller
                 'voice' => $creditService->sceneVoiceRegenerationCost(),
             ],
             'userCredits' => (int) $user->credits,
+            'viewOnly' => false,
+        ]);
+    }
+
+    /**
+     * Toggle project visibility: Private (default) or Public (shareable).
+     * When setting public, creates a unique share token if none exists.
+     */
+    public function updateVisibility(Request $request, Project $project)
+    {
+        $request->validate([
+            'is_public' => 'required|boolean',
+        ]);
+
+        $project->update(['is_public' => $request->boolean('is_public')]);
+
+        if ($project->is_public) {
+            ProjectEngagement::incrementFor($project, 'share_count');
+            $token = $project->shareToken ?? ProjectShareToken::create([
+                'project_id' => $project->id,
+                'token' => ProjectShareToken::generateUniqueToken(),
+            ]);
+            $shareUrl = route('share.show', $token->token);
+        } else {
+            $shareUrl = null;
+        }
+
+        return back()->with([
+            'shareUrl' => $shareUrl,
         ]);
     }
 
@@ -271,60 +323,151 @@ class ProjectController extends Controller
         return redirect()->route('projects.index')->with('success', 'Project created. Scene generation has started.');
     }
 
-    public function clone(Project $project, CreditService $creditService)
+    public function clone(Project $project)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
+        if ($project->is_archived) {
+            return redirect()->route('projects.index')->withErrors(['project' => 'Cannot duplicate an archived project. Restore it first.']);
         }
+
+        ProjectEngagement::incrementFor($project, 'clone_count');
 
         $user = auth()->user();
-        if (! $creditService->hasEnoughForSceneGeneration($user)) {
-            return redirect()->route('projects.index')->withErrors([
-                'credits' => 'Insufficient credits to clone. Required: ' . $creditService->sceneGenerationCost(),
+
+        $clone = DB::transaction(function () use ($project, $user) {
+            $clone = Project::create([
+                'user_id' => $user->id,
+                'book_id' => $project->book_id,
+                'title' => $project->title . ' (Copy)',
+                'description' => $project->description,
+                'story_source' => $project->story_source,
+                'source_type' => $project->source_type,
+                'is_public' => false,
+                'status' => ProjectStatus::Draft,
+                'total_credits_used' => 0,
+                'language' => $project->language,
+                'video_minutes' => $project->video_minutes,
+                'quality' => $project->quality,
+                'reels_per_episode' => $project->reels_per_episode,
+                'intro_song' => $project->intro_song,
+                'background_music' => $project->background_music,
             ]);
-        }
 
-        $clone = Project::create([
-            'user_id' => $user->id,
-            'book_id' => $project->book_id,
-            'title' => $project->title . ' (Copy)',
-            'description' => $project->description,
-            'story_source' => $project->story_source,
-            'source_type' => $project->source_type,
-            'is_public' => false,
-            'status' => ProjectStatus::Draft,
-            'total_credits_used' => 0,
-            'language' => $project->language,
-            'video_minutes' => $project->video_minutes,
-            'quality' => $project->quality,
-            'reels_per_episode' => $project->reels_per_episode,
-            'intro_song' => $project->intro_song,
-            'background_music' => $project->background_music,
-        ]);
+            $clone->dubLanguages()->sync($project->dubLanguages()->pluck('id')->all());
 
-        $clone->dubLanguages()->sync($project->dubLanguages()->pluck('id')->all());
+            $charMap = [];
+            foreach ($project->characters as $char) {
+                $newChar = Character::create([
+                    'project_id' => $clone->id,
+                    'name' => $char->name,
+                    'description' => $char->description,
+                    'locked_face' => $char->locked_face,
+                    'selected_image_id' => $char->selected_image_id,
+                    'image_prompt' => $char->image_prompt,
+                    'image_path' => $char->image_path,
+                ]);
+                $charMap[$char->id] = $newChar->id;
+            }
 
-        $creditService->deductForSceneGeneration($user, $clone);
-        $clone->update(['status' => ProjectStatus::Generating]);
-        GenerateProjectStructureJob::dispatch($clone);
+            $episodeMap = [];
+            $projectId = $project->id;
+            $episodes = $project->episodes()->orderBy('episode_number')->with([
+                'scenes' => fn ($q) => $q->orderBy('scene_number')->with([
+                    'characters',
+                    'sceneRenderSettings' => fn ($q2) => $q2->where('project_id', $projectId),
+                ]),
+            ])->get();
 
-        return redirect()->route('projects.index')->with('success', 'Project cloned. Scene generation has started.');
+            foreach ($episodes as $ep) {
+                $newEp = Episode::create([
+                    'project_id' => $clone->id,
+                    'title' => $ep->title,
+                    'episode_number' => $ep->episode_number,
+                    'summary' => $ep->summary,
+                    'status' => $ep->status,
+                    'total_credits_used' => 0,
+                ]);
+                $episodeMap[$ep->id] = $newEp->id;
+            }
+
+            foreach ($episodes as $ep) {
+                $newEpisodeId = $episodeMap[$ep->id] ?? null;
+                if (! $newEpisodeId) {
+                    continue;
+                }
+                foreach ($ep->scenes as $scene) {
+                    $newScene = Scene::create([
+                        'episode_id' => $newEpisodeId,
+                        'title' => $scene->title,
+                        'description' => $scene->description,
+                        'image_url' => null,
+                        'voice_url' => null,
+                        'duration' => $scene->duration ?? 0,
+                        'credits_used' => 0,
+                        'status' => $scene->status ?? null,
+                        'camera_style' => $scene->camera_style,
+                        'lighting' => $scene->lighting,
+                        'location' => $scene->location,
+                        'time_of_day' => $scene->time_of_day,
+                        'mood' => $scene->mood,
+                        'scene_number' => $scene->scene_number,
+                    ]);
+                    foreach ($scene->characters as $char) {
+                        $newCharId = $charMap[$char->id] ?? null;
+                        if ($newCharId) {
+                            $newScene->characters()->attach($newCharId, ['action' => $char->pivot->action ?? null]);
+                        }
+                    }
+                    $settings = $scene->sceneRenderSettings->first();
+                    if ($settings) {
+                        SceneRenderSettings::create([
+                            'project_id' => $clone->id,
+                            'scene_id' => $newScene->id,
+                            'sort_order' => $settings->sort_order,
+                            'duration_trimmed' => $settings->duration_trimmed,
+                            'transition_style' => $settings->transition_style,
+                        ]);
+                    }
+                }
+            }
+
+            return $clone;
+        });
+
+        return redirect()->route('projects.index')->with('success', 'Project duplicated. You can edit and generate when ready.');
     }
 
     public function archive(Project $project)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
-        $project->update(['status' => ProjectStatus::Archived]);
+        $project->update(['is_archived' => true]);
         return redirect()->route('projects.index')->with('success', 'Project archived.');
+    }
+
+    public function restore(Project $project)
+    {
+        $project->update(['is_archived' => false]);
+        return redirect()->route('projects.index')->with('success', 'Project restored.');
+    }
+
+    /**
+     * Retry generating project structure after a failure. No additional credits; re-dispatches job.
+     */
+    public function retryStructure(Project $project)
+    {
+        if ($project->status !== ProjectStatus::Failed) {
+            return redirect()->route('projects.show', $project)->withErrors(['project' => 'Can only retry when project status is Failed.']);
+        }
+        if ($project->is_archived) {
+            return redirect()->route('projects.show', $project)->withErrors(['project' => 'Cannot retry an archived project.']);
+        }
+
+        $project->update(['status' => ProjectStatus::Generating]);
+        GenerateProjectStructureJob::dispatch($project);
+
+        return redirect()->route('projects.show', $project)->with('success', 'Structure generation has been queued for retry.');
     }
 
     public function destroy(Project $project)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
         $project->delete();
         return redirect()->route('projects.index')->with('success', 'Project deleted.');
     }

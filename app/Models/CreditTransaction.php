@@ -15,6 +15,8 @@ class CreditTransaction extends Model
         'user_id',
         'project_id',
         'scene_id',
+        'action_type',
+        'credits',
         'amount',
         'type',
         'feature',
@@ -34,6 +36,14 @@ class CreditTransaction extends Model
     public function scene(): BelongsTo
     {
         return $this->belongsTo(Scene::class);
+    }
+
+    /**
+     * Scope: usage transactions only (credit deductions).
+     */
+    public function scopeUsage($query)
+    {
+        return $query->where('type', 'usage');
     }
 }
 

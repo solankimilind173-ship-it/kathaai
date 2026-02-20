@@ -16,10 +16,6 @@ class TimelineController extends Controller
      */
     public function show(Project $project)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
-
         $project->load(['episodes' => fn ($q) => $q->orderBy('episode_number')]);
         $project->episodes->load(['scenes' => fn ($q) => $q->orderBy('scene_number')]);
 
@@ -98,10 +94,6 @@ class TimelineController extends Controller
 
     public function update(Request $request, Project $project)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
-
         $validEpisodeIds = $project->episodes()->pluck('id')->all();
 
         $request->validate([

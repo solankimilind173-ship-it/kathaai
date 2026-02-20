@@ -18,6 +18,7 @@ class Project extends Model
         'source_type',
         'is_public',
         'status',
+        'is_archived',
         'total_credits_used',
         'language',
         'image_generation_completed',
@@ -32,10 +33,21 @@ class Project extends Model
         'status' => ProjectStatus::class,
         'source_type' => SourceType::class,
         'is_public' => 'boolean',
+        'is_archived' => 'boolean',
         'intro_song' => 'boolean',
         'background_music' => 'boolean',
         'total_credits_used' => 'integer',
     ];
+
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return $query->where('is_archived', false);
+    }
+
+    public function scopeArchived(Builder $query): Builder
+    {
+        return $query->where('is_archived', true);
+    }
 
     public function book()
     {
@@ -89,6 +101,16 @@ class Project extends Model
     public function renderRunLogs()
     {
         return $this->hasMany(RenderLog::class, 'project_id');
+    }
+
+    public function shareToken()
+    {
+        return $this->hasOne(ProjectShareToken::class, 'project_id');
+    }
+
+    public function engagement()
+    {
+        return $this->hasOne(ProjectEngagement::class, 'project_id');
     }
 
     public function renderSettings()

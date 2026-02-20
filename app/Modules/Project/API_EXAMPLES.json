@@ -1,0 +1,120 @@
+{
+  "description": "Example JSON responses for Project module API / web endpoints",
+  "render_estimate": {
+    "endpoint": "POST /projects/{id}/render/estimate",
+    "request": {
+      "resolution": "1080p",
+      "format": "16:9",
+      "fps": 24,
+      "background_music": false,
+      "subtitle_style": "default"
+    },
+    "response_200": {
+      "cost": 125,
+      "duration_minutes": 5.2,
+      "user_credits": 500
+    }
+  },
+  "projects_index_inertia": {
+    "description": "Inertia props for GET /projects (Project/Pages/Index)",
+    "projects": {
+      "data": [
+        {
+          "id": 1,
+          "user_id": 1,
+          "title": "My Story",
+          "status": "ready",
+          "is_archived": false,
+          "episodes_count": 3,
+          "characters_count": 4,
+          "scenes_count": 12,
+          "created_at": "2026-02-19T10:00:00.000000Z",
+          "updated_at": "2026-02-19T12:00:00.000000Z"
+        }
+      ],
+      "current_page": 1,
+      "per_page": 15,
+      "total": 1
+    },
+    "filters": {
+      "archived": false,
+      "search": "",
+      "status": "",
+      "date_from": "",
+      "date_to": "",
+      "sort": "created_at",
+      "dir": "desc"
+    },
+    "statusOptions": [
+      { "value": "draft", "label": "Draft" },
+      { "value": "generating", "label": "Generating" },
+      { "value": "ready", "label": "Ready" },
+      { "value": "rendering", "label": "Rendering" },
+      { "value": "completed", "label": "Completed" },
+      { "value": "failed", "label": "Failed" }
+    ]
+  },
+  "project_show_inertia": {
+    "description": "Inertia props for GET /projects/{id} (Project/Pages/Show)",
+    "project": {
+      "id": 1,
+      "title": "My Story",
+      "status": "ready",
+      "source_type": "uploaded",
+      "is_public": false,
+      "is_archived": false,
+      "total_credits_used": 180,
+      "episodes_count": 3,
+      "characters_count": 4,
+      "scenes_count": 12,
+      "episodes": [],
+      "characters": [],
+      "dub_languages": []
+    },
+    "projectAnalytics": {
+      "total_credits_used": 180,
+      "credits_per_feature": [
+        { "feature": "scene_generation", "label": "Scene generation", "credits": 50 },
+        { "feature": "scene_image", "label": "Scene images", "credits": 80 },
+        { "feature": "scene_voice", "label": "Scene voice", "credits": 50 }
+      ],
+      "total_scenes": 12,
+      "total_duration_seconds": 312
+    },
+    "estimatedCredits": 125,
+    "userCredits": 320,
+    "sceneRegenerationCosts": { "image": 15, "voice": 10 },
+    "timeline": [
+      { "date": "2026-02-19T12:00:00.000000Z", "label": "Last render activity", "description": null },
+      { "date": "2026-02-19T10:00:00.000000Z", "label": "Episode added", "description": "Episode 2" },
+      { "date": "2026-02-19T08:00:00.000000Z", "label": "Project created", "description": null }
+    ]
+  },
+  "timeline_update": {
+    "endpoint": "PATCH /projects/{id}/timeline",
+    "request": {
+      "scene_order": [1, 2, 3, 4],
+      "scenes": [
+        { "id": 1, "duration_trimmed": 25, "transition_style": "fade" },
+        { "id": 2, "duration_trimmed": 30, "transition_style": "none" }
+      ],
+      "background_music_url": "https://example.com/music.mp3",
+      "subtitles_enabled": true,
+      "subtitle_style": "default"
+    },
+    "response": "Redirect 302 to timeline.show with flash success"
+  },
+  "errors": {
+    "403_archived": {
+      "message": "AI actions are not allowed on archived projects. Restore the project first."
+    },
+    "404_not_found": "Generic 404 for missing or non-owned project (prevents ID enumeration).",
+    "422_validation": {
+      "message": "The given data was invalid.",
+      "errors": {
+        "title": ["The title field is required."],
+        "credits": ["Insufficient credits. Required: 50, available: 10."]
+      }
+    }
+  }
+}

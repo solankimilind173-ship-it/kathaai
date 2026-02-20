@@ -12,6 +12,7 @@ class PlanSeeder extends Seeder
     /**
      * Run the database seeds.
      * Seeds subscription plans (Starter, Pro, Enterprise) and their features.
+     * Prices are in INR (Indian Rupees).
      */
     public function run(): void
     {
@@ -19,8 +20,8 @@ class PlanSeeder extends Seeder
             [
                 'slug' => 'starter',
                 'name' => 'Starter',
-                'price' => 9.99,
-                'yearly_price' => 99.99,
+                'price' => 1499,
+                'yearly_price' => 14999,
                 'monthly_credits' => 500,
                 'credit_rollover' => false,
                 'is_active' => true,
@@ -43,8 +44,8 @@ class PlanSeeder extends Seeder
             [
                 'slug' => 'pro',
                 'name' => 'Pro',
-                'price' => 29.99,
-                'yearly_price' => 299.99,
+                'price' => 4999,
+                'yearly_price' => 49999,
                 'monthly_credits' => 2000,
                 'credit_rollover' => true,
                 'is_active' => true,
@@ -67,8 +68,8 @@ class PlanSeeder extends Seeder
             [
                 'slug' => 'enterprise',
                 'name' => 'Enterprise',
-                'price' => 99.99,
-                'yearly_price' => 999.99,
+                'price' => 14999,
+                'yearly_price' => 149999,
                 'monthly_credits' => 10000,
                 'credit_rollover' => true,
                 'is_active' => true,
@@ -96,8 +97,12 @@ class PlanSeeder extends Seeder
             $features = $t['features'];
             unset($t['features']);
 
+            $slug = $t['slug'];
+            $t['stripe_price_id'] = config("services.stripe.plans.{$slug}.monthly");
+            $t['stripe_yearly_price_id'] = config("services.stripe.plans.{$slug}.yearly");
+
             $plan = Plan::updateOrCreate(
-                ['slug' => $t['slug']],
+                ['slug' => $slug],
                 $t
             );
 

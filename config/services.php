@@ -46,6 +46,27 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL') . '/auth/google/callback'),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'yearly_discount_percent' => (int) env('SUBSCRIPTION_YEARLY_DISCOUNT_PERCENT', 20),
+        'plans' => [
+            'starter' => [
+                'monthly' => env('STRIPE_PRICE_STARTER_MONTHLY'),
+                'yearly' => env('STRIPE_PRICE_STARTER_YEARLY'),
+            ],
+            'pro' => [
+                'monthly' => env('STRIPE_PRICE_PRO_MONTHLY'),
+                'yearly' => env('STRIPE_PRICE_PRO_YEARLY'),
+            ],
+            'enterprise' => [
+                'monthly' => env('STRIPE_PRICE_ENTERPRISE_MONTHLY'),
+                'yearly' => env('STRIPE_PRICE_ENTERPRISE_YEARLY'),
+            ],
+        ],
+    ],
+
     'apple' => [
         'client_id' => env('APPLE_CLIENT_ID'),
         'client_secret' => env('APPLE_CLIENT_SECRET'),

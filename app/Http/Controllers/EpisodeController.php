@@ -6,6 +6,7 @@ use App\Jobs\GenerateScenesJob;
 use App\Models\Episode;
 use App\Models\Project;
 use App\Models\Scene;
+use App\Services\RegenerationLimitService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -13,10 +14,6 @@ class EpisodeController extends Controller
 {
     public function store(Request $request, Project $project)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
-        }
-
         $request->validate([
             'title' => 'nullable|string|max:255',
         ]);
@@ -39,7 +36,7 @@ class EpisodeController extends Controller
     {
         $episode->load('project');
         if ($episode->project->user_id !== auth()->id()) {
-            abort(403);
+            abort(404);
         }
 
         $project = $episode->project;
@@ -48,13 +45,22 @@ class EpisodeController extends Controller
         return redirect()->route('projects.show', $project)->with('success', 'Episode deleted.');
     }
 
-    public function regenerate(Episode $episode)
+    public function regenerate(Episode $episode, RegenerationLimitService $regenerationLimit)
     {
         $episode->load('project');
         if ($episode->project->user_id !== auth()->id()) {
-            abort(403);
+            abort(404);
+        }
+        if ($episode->project->is_archived) {
+            abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
         }
 
+        if (! $regenerationLimit->canRegenerateEpisode($episode)) {
+            return redirect()->route('projects.show', $episode->project)
+                ->withErrors(['regeneration' => $regenerationLimit->limitReachedMessage('episode')]);
+        }
+
+        $regenerationLimit->recordEpisodeRegeneration($episode);
         Scene::where('episode_id', $episode->id)->delete();
 
         $episode->update(['status' => 'generating_scenes']);
@@ -64,12 +70,30 @@ class EpisodeController extends Controller
         return redirect()->route('projects.show', $episode->project)->with('success', 'Episode regeneration started.');
     }
 
-    public function reorder(Request $request, Project $project)
+    /**
+     * Retry scene generation for an episode that failed. No additional credits.
+     */
+    public function retryScenes(Episode $episode)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
+        $episode->load('project');
+        if ($episode->project->user_id !== auth()->id()) {
+            abort(404);
+        }
+        if ($episode->project->is_archived) {
+            return redirect()->route('projects.show', $episode->project)->withErrors(['episode' => 'Cannot retry on an archived project.']);
+        }
+        if (($episode->status ?? '') !== 'scene_failed') {
+            return redirect()->route('projects.show', $episode->project)->withErrors(['episode' => 'Can only retry when episode scene generation has failed.']);
         }
 
+        $episode->update(['status' => 'generating_scenes']);
+        GenerateScenesJob::dispatch($episode);
+
+        return redirect()->route('projects.show', $episode->project)->with('success', 'Scene generation has been queued for retry.');
+    }
+
+    public function reorder(Request $request, Project $project)
+    {
         $request->validate([
             'order' => 'required|array',
             'order.*' => [Rule::exists('episodes', 'id')->where('project_id', $project->id)],

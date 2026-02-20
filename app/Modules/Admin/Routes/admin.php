@@ -2,6 +2,7 @@
 
 use App\Modules\Admin\Controllers\AnalyticsController;
 use App\Modules\Admin\Controllers\DashboardController;
+use App\Modules\Admin\Controllers\NotificationsController;
 use App\Modules\Admin\Controllers\ProjectsController;
 use App\Modules\Admin\Controllers\SubscriptionsController;
 use App\Modules\Admin\Controllers\UsersController;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+
+Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
 
 Route::get('/subscriptions', [SubscriptionsController::class, 'index'])->name('subscriptions.index');
 Route::get('/subscriptions/create', [SubscriptionsController::class, 'create'])->name('subscriptions.create');

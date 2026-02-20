@@ -8,7 +8,7 @@ export default function GuestLayout({ children }) {
                 href="/"
                 className="flex flex-col items-center rounded-2xl bg-white/90 px-8 py-6 shadow-lg ring-1 ring-amber-200/50 sm:px-10 sm:py-8"
             >
-                <ApplicationLogo className="h-24 w-auto object-contain sm:h-28" />
+                <ApplicationLogo className="h-28 w-auto max-w-[200px] object-contain sm:h-32" alt="KATHAAI" />
                 <span className="mt-2 font-display text-lg font-semibold tracking-wide text-stone-800 sm:text-xl">
                     KATHAAI
                 </span>

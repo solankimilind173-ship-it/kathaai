@@ -64,7 +64,7 @@ class ImageGalleryController extends Controller
 
         $character->load('project');
         if ($character->project->user_id !== $request->user()->id) {
-            abort(403);
+            abort(404);
         }
 
         $path = Storage::disk('public')->path($character->image_path);

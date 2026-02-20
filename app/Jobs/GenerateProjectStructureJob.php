@@ -62,6 +62,15 @@ class GenerateProjectStructureJob implements ShouldQueue
             GenerateCharacterPromptsJob::dispatch($project)->delay(now()->addSeconds(60));
             GenerateCharacterImagesJob::dispatch($project)->delay(now()->addSeconds(110));
 
+            $project->load('user');
+            if ($project->user) {
+                app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                    $project->user,
+                    $project,
+                    'Structure generated',
+                    'Your story has been chunked and episode generation has been queued.'
+                );
+            }
         } catch (Throwable $e) {
             Log::error('GenerateProjectStructureJob failed', [
                 'project_id' => $project->id,
@@ -69,7 +78,7 @@ class GenerateProjectStructureJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
             $project->update(['status' => \App\Enums\ProjectStatus::Failed]);
-            throw $e;
+            // Do not rethrow: job is considered handled so user can retry manually
         }
     }
 

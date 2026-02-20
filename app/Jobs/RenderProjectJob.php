@@ -53,11 +53,22 @@ class RenderProjectJob implements ShouldQueue
             ]);
 
             $project->update(['status' => ProjectStatus::Completed]);
+
+            $project->load('user');
+            if ($project->user) {
+                app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                    $project->user,
+                    $project,
+                    'Render completed',
+                    'Your video render has completed successfully.'
+                );
+            }
         } catch (\Throwable $e) {
-            Log::error('RenderProjectJob: failed', [
+            Log::error('RenderProjectJob failed', [
                 'project_id' => $project->id,
                 'render_log_id' => $renderLog->id,
-                'message' => $e->getMessage(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             $renderLog->update([
@@ -67,6 +78,7 @@ class RenderProjectJob implements ShouldQueue
             ]);
 
             $project->update(['status' => ProjectStatus::Failed]);
+            // Do not rethrow: job is handled; user can retry
         }
     }
 }

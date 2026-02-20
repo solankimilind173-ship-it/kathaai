@@ -19,7 +19,8 @@ class ImportUsersRequest extends FormRequest
                 'required',
                 'file',
                 'mimes:csv,txt',
-                'max:10240',
+                'mimetypes:text/csv,text/plain,application/csv',
+                'max:10240', // 10 MiB
                 new CsvUserImportStructure(1000),
             ],
         ];

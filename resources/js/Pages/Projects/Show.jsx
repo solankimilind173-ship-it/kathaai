@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ShareLayout from '@/Layouts/ShareLayout';
 import Card from '@/Components/Card';
 import Badge from '@/Components/Badge';
 import PageHeading from '@/Components/PageHeading';
@@ -58,6 +59,8 @@ function SceneCard({
     onRegenerateVoice,
     cameraStyles,
     lightingOptions,
+    disableRegenerate = false,
+    viewOnly = false,
 }) {
     const [editing, setEditing] = useState(false);
     const [description, setDescription] = useState(scene.description ?? '');
@@ -146,27 +149,29 @@ function SceneCard({
                             {(scene.duration ?? 0) > 0 && <span className="text-xs text-gray-500">{scene.duration}s</span>}
                             {(scene.credits_used ?? 0) > 0 && <span className="text-xs text-gray-500">{scene.credits_used} credits</span>}
                         </div>
+                        {!viewOnly && (
                         <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
                             <SecondaryButton className="!py-1 !text-xs" onClick={() => setEditing(true)}>Edit</SecondaryButton>
                             <button
                                 type="button"
-                                onClick={() => canAffordImage && confirm(`Regenerate image? This will use ${imageCost} credits.`) && onRegenerateImage(scene)}
-                                disabled={!canAffordImage}
-                                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                                title={!canAffordImage ? `Need ${imageCost} credits (you have ${userCredits})` : `${imageCost} credits`}
+                                onClick={() => !disableRegenerate && canAffordImage && confirm(scene.status === 'image_failed' ? `Retry image? This will use ${imageCost} credits.` : `Regenerate image? This will use ${imageCost} credits.`) && onRegenerateImage(scene)}
+                                disabled={disableRegenerate || !canAffordImage}
+                                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={disableRegenerate ? 'Not available for archived projects' : (!canAffordImage ? `Need ${imageCost} credits (you have ${userCredits})` : `${imageCost} credits`)}
                             >
-                                Regenerate image ({imageCost} cr)
+                                {scene.status === 'image_failed' ? `Retry image (${imageCost} cr)` : `Regenerate image (${imageCost} cr)`}
                             </button>
                             <button
                                 type="button"
-                                onClick={() => canAffordVoice && confirm(`Regenerate voice? This will use ${voiceCost} credits.`) && onRegenerateVoice(scene)}
-                                disabled={!canAffordVoice}
-                                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                                title={!canAffordVoice ? `Need ${voiceCost} credits (you have ${userCredits})` : `${voiceCost} credits`}
+                                onClick={() => !disableRegenerate && canAffordVoice && confirm(scene.status === 'voice_failed' ? `Retry voice? This will use ${voiceCost} credits.` : `Regenerate voice? This will use ${voiceCost} credits.`) && onRegenerateVoice(scene)}
+                                disabled={disableRegenerate || !canAffordVoice}
+                                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={disableRegenerate ? 'Not available for archived projects' : (!canAffordVoice ? `Need ${voiceCost} credits (you have ${userCredits})` : `${voiceCost} credits`)}
                             >
-                                Regenerate voice ({voiceCost} cr)
+                                {scene.status === 'voice_failed' ? `Retry voice (${voiceCost} cr)` : `Regenerate voice (${voiceCost} cr)`}
                             </button>
                         </div>
+                        )}
                     </>
                 )}
             </div>
@@ -190,6 +195,8 @@ function EpisodeList({
     userCredits = 0,
     onRegenerateSceneImage,
     onRegenerateSceneVoice,
+    isArchived = false,
+    viewOnly = false,
 }) {
     const [expandedIds, setExpandedIds] = useState([]);
 
@@ -212,6 +219,7 @@ function EpisodeList({
                         className={`bg-white/80 transition-colors ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-indigo-400 ring-inset' : ''}`}
                     >
                         <div className="flex w-full items-center gap-3 px-4 py-3 text-left">
+                            {!viewOnly && (
                             <span
                                 draggable
                                 onDragStart={(e) => onDragStart(e, episode.id)}
@@ -223,6 +231,7 @@ function EpisodeList({
                                     <path d="M7 2a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V4a2 2 0 012-2h2zM15 2a2 2 0 012 2v12a2 2 0 01-2 2h-2a2 2 0 01-2-2V4a2 2 0 012-2h2z" />
                                 </svg>
                             </span>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => toggle(episode.id)}
@@ -246,11 +255,22 @@ function EpisodeList({
                                     </p>
                                 )}
                             </button>
+                            {!viewOnly && (
                             <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
+                                {(episode.status === 'scene_failed') && (
+                                    <button
+                                        type="button"
+                                        onClick={() => router.post(route('episodes.retry-scenes', episode))}
+                                        className="rounded border border-green-300 bg-green-50 px-2 py-1.5 text-xs font-medium text-green-800 hover:bg-green-100"
+                                    >
+                                        Retry scenes
+                                    </button>
+                                )}
                                 <button
                                     type="button"
+                                    disabled={isArchived}
                                     onClick={() => onRegenerate(episode)}
-                                    className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                    className="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Regenerate
                                 </button>
@@ -258,6 +278,7 @@ function EpisodeList({
                                     Delete
                                 </DangerButton>
                             </div>
+                            )}
                         </div>
                         <div className={`overflow-hidden border-t border-amber-200/20 ${isOpen ? 'max-h-[5000px]' : 'max-h-0'}`}>
                             <div className="bg-amber-50/40 px-4 pb-4 pt-2">
@@ -273,6 +294,8 @@ function EpisodeList({
                                                 onRegenerateVoice={onRegenerateSceneVoice}
                                                 cameraStyles={CAMERA_STYLES}
                                                 lightingOptions={LIGHTING_OPTIONS}
+                                                disableRegenerate={isArchived || viewOnly}
+                                                viewOnly={viewOnly}
                                             />
                                         ))}
                                     </div>
@@ -291,6 +314,7 @@ function EpisodeList({
 export default function Show({
     project,
     plan,
+    projectAnalytics = null,
     estimatedCredits,
     creditOptions,
     timeline = [],
@@ -298,11 +322,17 @@ export default function Show({
     sourceLabel,
     sceneRegenerationCosts = {},
     userCredits = 0,
+    viewOnly = false,
+    shareUrl = null,
+    hasFailedRender = false,
 }) {
     const dubLangs = project.dub_languages ?? project.dubLanguages ?? [];
     const dubLanguageNames = dubLangs.length ? dubLangs.map((l) => l.name).join(', ') : 'None';
     const projectStatus = project.status?.value ?? project.status;
-    const canShowRenderButton = projectStatus !== 'rendering' && (projectStatus === 'ready' || projectStatus === 'completed');
+    const isArchived = !!project.is_archived;
+    const canShowRenderButton = !isArchived && projectStatus !== 'rendering' && (projectStatus === 'ready' || projectStatus === 'completed');
+    const canRetryStructure = !viewOnly && !isArchived && projectStatus === 'failed';
+    const canRetryRender = !viewOnly && !isArchived && hasFailedRender && projectStatus !== 'rendering';
 
     const episodes = useMemo(
         () => [...(project.episodes ?? [])].sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0)),
@@ -391,35 +421,70 @@ export default function Show({
         router.delete(route('episodes.destroy', episode));
     }
 
+    const Layout = viewOnly ? ShareLayout : AuthenticatedLayout;
+    const layoutProps = viewOnly ? {} : { header: <h2 className="text-xl font-semibold leading-tight text-gray-800">Project</h2> };
+
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">Project</h2>
-            }
-        >
+        <Layout {...layoutProps}>
             <Head title={project.title} />
 
-            <div className="py-6">
+            <div className={viewOnly ? '' : 'py-6'}>
                 <div className="mx-auto max-w-7xl space-y-8 sm:px-6 lg:px-8">
                     <PageHeading
                         title={project.title}
                         description={`${project.episodes_count ?? 0} episodes · ${project.characters_count ?? 0} characters`}
                         action={
-                            <div className="flex flex-wrap gap-2">
-                                {canShowRenderButton && (
-                                    <PrimaryButton type="button" onClick={() => setShowRenderModal(true)}>
-                                        Render
-                                    </PrimaryButton>
-                                )}
-                                <Link href={route('timeline.show', project)}>
-                                    <PrimaryButton>Timeline</PrimaryButton>
+                            viewOnly ? (
+                                <Link href="/" className="text-sm font-medium text-amber-700 hover:text-amber-800">
+                                    ← Back to KATHAAI
                                 </Link>
-                                <Link href={route('projects.index')}>
-                                    <SecondaryButton>← Back to Projects</SecondaryButton>
-                                </Link>
-                            </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {isArchived && (
+                                        <PrimaryButton
+                                            type="button"
+                                            onClick={() => router.patch(route('projects.restore', project))}
+                                        >
+                                            Restore project
+                                        </PrimaryButton>
+                                    )}
+                                    {canRetryStructure && (
+                                        <PrimaryButton
+                                            type="button"
+                                            onClick={() => router.post(route('projects.retry-structure', project))}
+                                        >
+                                            Retry structure
+                                        </PrimaryButton>
+                                    )}
+                                    {canShowRenderButton && (
+                                        <PrimaryButton type="button" onClick={() => setShowRenderModal(true)}>
+                                            Render
+                                        </PrimaryButton>
+                                    )}
+                                    {canRetryRender && (
+                                        <PrimaryButton
+                                            type="button"
+                                            onClick={() => router.post(route('projects.retry-render', project))}
+                                        >
+                                            Retry render
+                                        </PrimaryButton>
+                                    )}
+                                    <Link href={route('timeline.show', project)}>
+                                        <PrimaryButton disabled={isArchived}>Timeline</PrimaryButton>
+                                    </Link>
+                                    <Link href={route('projects.index')}>
+                                        <SecondaryButton>← Back to Projects</SecondaryButton>
+                                    </Link>
+                                </div>
+                            )
                         }
                     />
+
+                    {!viewOnly && isArchived && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            This project is archived. No AI actions (render, regenerate, clone) are allowed. Restore it to make changes or run AI actions.
+                        </div>
+                    )}
 
                     {/* 1. Overview */}
                     <Card>
@@ -465,6 +530,109 @@ export default function Show({
                             </div>
                         </dl>
                     </Card>
+
+                    {/* Visibility toggle + share link (owner only) */}
+                    {!viewOnly && (
+                        <Card>
+                            <Card.Header>
+                                <Card.Title>Visibility</Card.Title>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Private projects are only visible to you. Public projects can be shared via a link (view only).
+                                </p>
+                            </Card.Header>
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex rounded-lg border border-gray-200 p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => router.patch(route('projects.visibility', project), { is_public: false }, { preserveScroll: true })}
+                                        className={`rounded-md px-4 py-2 text-sm font-medium ${!project.is_public ? 'bg-amber-100 text-amber-900' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    >
+                                        Private
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.patch(route('projects.visibility', project), { is_public: true }, { preserveScroll: true })}
+                                        className={`rounded-md px-4 py-2 text-sm font-medium ${project.is_public ? 'bg-amber-100 text-amber-900' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    >
+                                        Public
+                                    </button>
+                                </div>
+                                {project.is_public && shareUrl && (
+                                    <div className="flex flex-1 min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={shareUrl}
+                                            className="min-w-0 flex-1 border-0 bg-transparent text-sm text-gray-700 focus:ring-0"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => { navigator.clipboard.writeText(shareUrl); }}
+                                            className="shrink-0 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Copy link
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Usage & analytics */}
+                    {!viewOnly && projectAnalytics && (
+                        <Card>
+                            <Card.Header>
+                                <Card.Title>Usage & analytics</Card.Title>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Credits used and generation stats for this project.
+                                </p>
+                            </Card.Header>
+                            <div className="space-y-6">
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-700">Total credits used</h4>
+                                    <p className="mt-1 text-2xl font-semibold text-gray-900">
+                                        {projectAnalytics.total_credits_used ?? 0} credits
+                                    </p>
+                                </div>
+                                {projectAnalytics.credits_per_feature?.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-700">Credits per feature</h4>
+                                        <ul className="mt-2 space-y-1.5">
+                                            {projectAnalytics.credits_per_feature.map((row) => (
+                                                <li
+                                                    key={row.feature}
+                                                    className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50/50 px-3 py-2 text-sm"
+                                                >
+                                                    <span className="text-gray-700">{row.label}</span>
+                                                    <span className="font-medium text-gray-900">{row.credits} credits</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Time taken for generation</dt>
+                                        <dd className="mt-1 text-sm font-medium text-gray-900">
+                                            {projectAnalytics.time_taken_human ?? '—'}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Total scenes</dt>
+                                        <dd className="mt-1 text-sm font-medium text-gray-900">
+                                            {projectAnalytics.total_scenes ?? 0}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm font-medium text-gray-500">Total duration</dt>
+                                        <dd className="mt-1 text-sm font-medium text-gray-900">
+                                            {projectAnalytics.total_duration_human ?? '—'}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </Card>
+                    )}
 
                     {/* 2. Characters */}
                     <Card>
@@ -517,9 +685,10 @@ export default function Show({
                                 <div>
                                     <h2 className="text-lg font-semibold text-gray-900">Episodes</h2>
                                     <p className="mt-1 text-sm text-gray-500">
-                                        Drag to reorder. Expand to view scenes. Add, regenerate, or delete episodes.
+                                        {viewOnly ? 'Expand to view scenes.' : 'Drag to reorder. Expand to view scenes. Add, regenerate, or delete episodes.'}
                                     </p>
                                 </div>
+                                {!viewOnly && (
                                 <div className="flex items-center gap-2">
                                     {showAddEpisode ? (
                                         <form onSubmit={addEpisode} className="flex gap-2">
@@ -543,6 +712,7 @@ export default function Show({
                                         </PrimaryButton>
                                     )}
                                 </div>
+                                )}
                             </div>
                         </div>
                         <div className="px-6 pb-6">
@@ -563,6 +733,8 @@ export default function Show({
                                     userCredits={userCredits}
                                     onRegenerateSceneImage={(scene) => router.post(route('scenes.regenerate-image', scene))}
                                     onRegenerateSceneVoice={(scene) => router.post(route('scenes.regenerate-voice', scene))}
+                                    isArchived={isArchived}
+                                    viewOnly={viewOnly}
                                 />
                             ) : (
                                 <p className="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-500">
@@ -611,6 +783,7 @@ export default function Show({
                     </Card>
 
                     {/* 5. Render History */}
+                    {!viewOnly && (
                     <Card>
                         <Card.Header>
                             <Card.Title>Render History</Card.Title>
@@ -673,8 +846,10 @@ export default function Show({
                             </p>
                         )}
                     </Card>
+                    )}
 
                     {/* 6. Analytics */}
+                    {!viewOnly && (
                     <Card>
                         <Card.Header>
                             <Card.Title>Analytics</Card.Title>
@@ -726,6 +901,7 @@ export default function Show({
                             )}
                         </div>
                     </Card>
+                    )}
 
                     {/* Render settings modal */}
                     <Modal show={showRenderModal} onClose={() => !renderSubmitting && setShowRenderModal(false)} maxWidth="lg">
@@ -825,6 +1001,6 @@ export default function Show({
                     </Modal>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }

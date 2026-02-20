@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProjectStatus;
 use App\Jobs\RenderProjectJob;
-use App\Models\CreditTransaction;
 use App\Models\Project;
+use App\Models\ProjectEngagement;
 use App\Models\RenderLog;
 use App\Services\CreditCalculator;
+use App\Services\CreditService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class RenderController extends Controller
 {
@@ -18,8 +18,8 @@ class RenderController extends Controller
      */
     public function estimateCost(Request $request, Project $project, CreditCalculator $creditCalculator)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
+        if ($project->is_archived) {
+            abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
         }
 
         $request->validate([
@@ -50,10 +50,10 @@ class RenderController extends Controller
     /**
      * Start render: deduct credits, create render_log, set project status, dispatch job.
      */
-    public function start(Request $request, Project $project, CreditCalculator $creditCalculator)
+    public function start(Request $request, Project $project, CreditCalculator $creditCalculator, CreditService $creditService)
     {
-        if ($project->user_id !== auth()->id()) {
-            abort(403);
+        if ($project->is_archived) {
+            abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
         }
 
         $user = auth()->user();
@@ -81,25 +81,15 @@ class RenderController extends Controller
             'background_music' => (bool) $request->input('background_music', false),
         ]);
 
-        if ($user->credits < $amount) {
+        if (! $creditService->hasEnoughCredits($user, $amount)) {
             return back()->withErrors([
                 'credits' => "Insufficient credits. Required: {$amount}, available: {$user->credits}.",
             ]);
         }
 
-        DB::transaction(function () use ($user, $project, $amount, $request) {
-            CreditTransaction::create([
-                'user_id' => $user->id,
-                'project_id' => $project->id,
-                'amount' => -$amount,
-                'type' => 'usage',
-                'feature' => 'project_render',
-                'description' => 'Project render',
-            ]);
+        $creditService->deductForRender($user, $project, $amount);
 
-            $user->decrement('credits', $amount);
-            $project->increment('total_credits_used', $amount);
-        });
+        ProjectEngagement::incrementFor($project, 'render_count');
 
         $renderLog = RenderLog::create([
             'project_id' => $project->id,
@@ -117,6 +107,28 @@ class RenderController extends Controller
         ]);
 
         return redirect()->route('projects.show', $project)->with('success', 'Render started.');
+    }
+
+    /**
+     * Retry the last failed render. No additional credits; re-dispatches with same render_log.
+     */
+    public function retryRender(Project $project)
+    {
+        if ($project->is_archived) {
+            return redirect()->route('projects.show', $project)->withErrors(['project' => 'Cannot retry render on an archived project.']);
+        }
+
+        $lastFailed = $project->renderRunLogs()->where('status', 'failed')->latest()->first();
+        if (! $lastFailed) {
+            return redirect()->route('projects.show', $project)->withErrors(['project' => 'No failed render to retry.']);
+        }
+
+        $lastFailed->update(['status' => 'pending', 'error_message' => null, 'completed_at' => null]);
+        $project->update(['status' => ProjectStatus::Rendering]);
+        ProjectEngagement::incrementFor($project, 'render_count');
+        RenderProjectJob::dispatch($project, $lastFailed, []);
+
+        return redirect()->route('projects.show', $project)->with('success', 'Render has been queued for retry.');
     }
 
     private function getProjectDurationMinutes(Project $project): float

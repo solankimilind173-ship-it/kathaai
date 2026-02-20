@@ -4,7 +4,20 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
+
+function getDeviceId() {
+    try {
+        let id = localStorage.getItem('device_id');
+        if (!id) {
+            id = 'web-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+            localStorage.setItem('device_id', id);
+        }
+        return id;
+    } catch {
+        return null;
+    }
+}
 
 export default function UpdatePasswordForm({ className = '' }) {
     const passwordInput = useRef();
@@ -22,11 +35,26 @@ export default function UpdatePasswordForm({ className = '' }) {
         current_password: '',
         password: '',
         password_confirmation: '',
+        location: '',
+        device_id: getDeviceId(),
     });
+
+    useEffect(() => {
+        setData('device_id', getDeviceId());
+    }, [setData]);
+
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setData('location', `Lat: ${pos.coords.latitude.toFixed(4)}, Long: ${pos.coords.longitude.toFixed(4)}`),
+                () => {},
+                { maximumAge: 300000 }
+            );
+        }
+    }, [setData]);
 
     const updatePassword = (e) => {
         e.preventDefault();
-
         put(route('password.update'), {
             preserveScroll: true,
             onSuccess: () => reset(),

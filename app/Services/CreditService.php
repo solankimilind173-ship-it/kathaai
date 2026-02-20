@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\InsufficientCreditsException;
+use App\Services\ProjectAnalyticsService;
 use App\Models\CreditTransaction;
 use App\Models\Project;
 use App\Models\Scene;
@@ -12,49 +13,62 @@ use Illuminate\Support\Facades\DB;
 class CreditService
 {
     /**
-     * Deduct credits for initial scene generation and record on project.
-     * Blocks (throws) if user has insufficient credits.
+     * Check balance, deduct credits, and log transaction for any usage action.
+     * Use this for every credit-consuming action.
+     *
+     * @param  int  $credits  Positive amount to deduct
+     * @param  Scene|null  $scene  If set, also increment scene.credits_used
+     * @throws InsufficientCreditsException
+     */
+    public function deduct(User $user, Project $project, int $credits, string $actionType, ?Scene $scene = null): void
+    {
+        if ($user->credits < $credits) {
+            throw new InsufficientCreditsException(
+                $credits,
+                (int) $user->credits,
+                "This action requires {$credits} credits. You have {$user->credits}."
+            );
+        }
+
+        DB::transaction(function () use ($user, $project, $credits, $actionType, $scene) {
+            CreditTransaction::create([
+                'user_id' => $user->id,
+                'project_id' => $project->id,
+                'scene_id' => $scene?->id,
+                'action_type' => $actionType,
+                'credits' => $credits,
+                'amount' => -$credits,
+                'type' => 'usage',
+                'feature' => $actionType,
+                'description' => $this->actionDescription($actionType),
+            ]);
+
+            $user->decrement('credits', $credits);
+            $project->increment('total_credits_used', $credits);
+            if ($scene) {
+                $scene->increment('credits_used', $credits);
+            }
+        });
+
+        ProjectAnalyticsService::invalidateCache($project);
+    }
+
+    /**
+     * Deduct credits for initial scene generation.
      *
      * @throws InsufficientCreditsException
      */
     public function deductForSceneGeneration(User $user, Project $project): void
     {
-        $amount = (int) config('ai_costs.scene_generation_initial', 50);
-
-        if ($user->credits < $amount) {
-            throw new InsufficientCreditsException(
-                $amount,
-                (int) $user->credits,
-                "Scene generation requires {$amount} credits. You have {$user->credits}."
-            );
-        }
-
-        DB::transaction(function () use ($user, $project, $amount) {
-            CreditTransaction::create([
-                'user_id' => $user->id,
-                'project_id' => $project->id,
-                'amount' => -$amount,
-                'type' => 'usage',
-                'feature' => 'scene_generation',
-                'description' => 'Initial scene generation',
-            ]);
-
-            $user->decrement('credits', $amount);
-            $project->increment('total_credits_used', $amount);
-        });
+        $credits = $this->sceneGenerationCost();
+        $this->deduct($user, $project, $credits, 'scene_generation');
     }
 
-    /**
-     * Return the number of credits required for initial scene generation.
-     */
     public function sceneGenerationCost(): int
     {
         return (int) config('ai_costs.scene_generation_initial', 50);
     }
 
-    /**
-     * Check if user has at least the required credits for scene generation.
-     */
     public function hasEnoughForSceneGeneration(User $user): bool
     {
         return $user->credits >= $this->sceneGenerationCost();
@@ -81,14 +95,16 @@ class CreditService
     }
 
     /**
-     * Deduct credits for scene image regeneration. Updates scene, episode and project credits.
+     * Deduct credits for scene image regeneration.
      *
      * @throws InsufficientCreditsException
      */
     public function deductForSceneImage(User $user, Scene $scene): void
     {
-        $amount = $this->sceneImageRegenerationCost();
-        $this->deductForSceneAction($user, $scene, $amount, 'scene_image_regeneration', 'Scene image regeneration');
+        $scene->loadMissing('episode.project');
+        $project = $scene->episode->project;
+        $credits = $this->sceneImageRegenerationCost();
+        $this->deduct($user, $project, $credits, 'scene_image_regeneration', $scene);
     }
 
     /**
@@ -98,41 +114,35 @@ class CreditService
      */
     public function deductForSceneVoice(User $user, Scene $scene): void
     {
-        $amount = $this->sceneVoiceRegenerationCost();
-        $this->deductForSceneAction($user, $scene, $amount, 'scene_voice_regeneration', 'Scene voice regeneration');
+        $scene->loadMissing('episode.project');
+        $project = $scene->episode->project;
+        $credits = $this->sceneVoiceRegenerationCost();
+        $this->deduct($user, $project, $credits, 'scene_voice_regeneration', $scene);
     }
 
     /**
+     * Check balance and deduct credits for project render.
+     *
      * @throws InsufficientCreditsException
      */
-    private function deductForSceneAction(User $user, Scene $scene, int $amount, string $feature, string $description): void
+    public function deductForRender(User $user, Project $project, int $credits): void
     {
-        if ($user->credits < $amount) {
-            throw new InsufficientCreditsException(
-                $amount,
-                (int) $user->credits,
-                "This action requires {$amount} credits. You have {$user->credits}."
-            );
-        }
+        $this->deduct($user, $project, $credits, 'project_render');
+    }
 
-        $scene->loadMissing('episode.project');
+    public function hasEnoughCredits(User $user, int $credits): bool
+    {
+        return $user->credits >= $credits;
+    }
 
-        $project = $scene->episode->project;
-
-        DB::transaction(function () use ($user, $scene, $project, $amount, $feature, $description) {
-            CreditTransaction::create([
-                'user_id' => $user->id,
-                'project_id' => $project->id,
-                'scene_id' => $scene->id,
-                'amount' => -$amount,
-                'type' => 'usage',
-                'feature' => $feature,
-                'description' => $description,
-            ]);
-
-            $user->decrement('credits', $amount);
-            $project->increment('total_credits_used', $amount);
-            $scene->increment('credits_used', $amount);
-        });
+    private function actionDescription(string $actionType): string
+    {
+        return match ($actionType) {
+            'scene_generation' => 'Initial scene generation',
+            'scene_image_regeneration' => 'Scene image regeneration',
+            'scene_voice_regeneration' => 'Scene voice regeneration',
+            'project_render' => 'Project render',
+            default => ucfirst(str_replace('_', ' ', $actionType)),
+        };
     }
 }

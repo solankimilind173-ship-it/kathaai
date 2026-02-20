@@ -79,31 +79,38 @@ class GenerateScenesJob implements ShouldQueue
             // Step 2: Clean old scenes (re-run safe)
             Scene::where('episode_id', $episode->id)->delete();
 
-            // Step 3: Save scenes
-            foreach ($scenes as $scene) {
-
-                if (!isset($scene['description'])) {
-                    continue;
+            // Step 3: Save scenes in chunks (reduces memory for large episode scene lists)
+            $episodeId = $episode->id;
+            collect($scenes)->filter(fn ($s) => ! empty($s['description'] ?? null))->chunk(20)->each(function ($chunk) use ($episodeId) {
+                foreach ($chunk as $scene) {
+                    Scene::create([
+                        'episode_id'   => $episodeId,
+                        'title'        => $scene['title'] ?? null,
+                        'location'     => $scene['location'] ?? null,
+                        'time_of_day'  => $scene['time_of_day'] ?? null,
+                        'mood'         => $scene['mood'] ?? null,
+                        'description'  => $scene['description'],
+                        'scene_number' => $scene['scene_number'] ?? 1,
+                    ]);
                 }
-
-                Scene::create([
-                    'episode_id'   => $episode->id,
-                    'title'        => $scene['title'] ?? null,
-                    'location'     => $scene['location'] ?? null,
-                    'time_of_day'  => $scene['time_of_day'] ?? null,
-                    'mood'         => $scene['mood'] ?? null,
-                    'description'  => $scene['description'],
-                    'scene_number' => $scene['scene_number'] ?? 1,
-                ]);
-            }
+            });
 
             // Mark success
             $episode->update(['status' => 'scenes_generated']);
 
-            // 🔴 IMPORTANT: reload scenes from DB
-            $episode->load('scenes');
+            $project = $episode->project;
+            $project->load('user');
+            if ($project->user) {
+                app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                    $project->user,
+                    $project,
+                    'Scenes generated',
+                    'Scenes for episode "' . ($episode->title ?: 'Episode ' . $episode->episode_number) . '" have been generated.'
+                );
+            }
 
-            // Step 4: Dispatch character mapping
+            // Step 4: Dispatch character mapping (chunked load to limit memory)
+            $episode->load('scenes');
             foreach ($episode->scenes as $scene) {
                 MapSceneCharactersJob::dispatch($scene)->delay(now()->addSeconds(5));
             }

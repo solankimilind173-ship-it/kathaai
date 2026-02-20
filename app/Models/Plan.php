@@ -13,6 +13,8 @@ class Plan extends Model
         'slug',
         'price',
         'yearly_price',
+        'stripe_price_id',
+        'stripe_yearly_price_id',
         'max_projects',
         'max_dubbing_languages',
         'max_reels_per_episode',
