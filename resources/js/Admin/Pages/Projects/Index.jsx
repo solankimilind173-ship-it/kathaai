@@ -5,7 +5,7 @@ import Table from '@/Components/Table';
 import Badge from '@/Components/Badge';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 function statusVariant(status) {
@@ -21,7 +21,6 @@ export default function AdminProjectsIndex({
     stats = {},
 }) {
     const [deleteProject, setDeleteProject] = useState(null);
-    const flash = usePage().props?.flash ?? {};
 
     const columns = [
         { key: 'id', label: 'ID' },
@@ -100,12 +99,6 @@ export default function AdminProjectsIndex({
             }
         >
             <Head title="Admin – Projects" />
-
-            {flash?.success && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    {flash.success}
-                </div>
-            )}
 
             {/* Stats */}
             <section className="mb-6">

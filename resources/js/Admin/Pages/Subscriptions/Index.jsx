@@ -11,7 +11,6 @@ import { useState } from 'react';
 
 export default function AdminSubscriptionsIndex({ plans, filters }) {
     const [deletePlan, setDeletePlan] = useState(null);
-    const flash = usePage().props?.flash ?? {};
 
     const columns = [
         { key: 'id', label: 'ID' },
@@ -83,17 +82,6 @@ export default function AdminSubscriptionsIndex({ plans, filters }) {
             }
         >
             <Head title="Admin – Subscriptions" />
-
-            {flash?.success && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    {flash.success}
-                </div>
-            )}
-            {flash?.error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                    {flash.error}
-                </div>
-            )}
 
             <Card className="border-amber-200/20">
                 <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

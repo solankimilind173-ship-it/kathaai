@@ -34,7 +34,7 @@ function formatDate(value) {
 }
 
 export default function Index({ projects, filters = {}, statusOptions = [] }) {
-    const { flash, errors: pageErrors } = usePage().props ?? {};
+    const { errors: pageErrors } = usePage().props ?? {};
     const statusLabelMap = useMemo(() => Object.fromEntries(statusOptions.map((o) => [o.value, o.label])), [statusOptions]);
 
     const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -109,14 +109,9 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    {flash?.success && (
-                        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-                            {flash.success}
-                        </div>
-                    )}
-                    {(flash?.error || pageErrors?.credits) && (
+                    {(pageErrors?.credits) && (
                         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                            {flash?.error ?? pageErrors?.credits}
+                            {pageErrors.credits}
                         </div>
                     )}
 

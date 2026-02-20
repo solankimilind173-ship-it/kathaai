@@ -12,7 +12,6 @@ export default function AdminUsersShow({ user, plans = [], totals = {}, creditsU
     const [showAdjustModal, setShowAdjustModal] = useState(false);
     const [showPlanModal, setShowPlanModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const flash = usePage().props?.flash ?? {};
     const authUser = usePage().props?.auth?.user;
     const isSelf = authUser?.id === user?.id;
 
@@ -33,9 +32,6 @@ export default function AdminUsersShow({ user, plans = [], totals = {}, creditsU
             header={<h2 className="text-xl font-semibold leading-tight text-stone-800">View user</h2>}
         >
             <Head title={`Admin – ${user?.name}`} />
-
-            {flash?.success && <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{flash.success}</div>}
-            {flash?.error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{flash.error}</div>}
 
             <div className="space-y-6">
                 {/* Profile & actions */}

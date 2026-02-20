@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Sidebar from '@/Components/Sidebar';
+import FlashToaster from '@/Components/FlashToaster';
 import { Link } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -59,6 +60,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     )}
 
                     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                        <FlashToaster />
                         {children}
                     </div>
                 </div>

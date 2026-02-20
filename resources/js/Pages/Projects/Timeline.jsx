@@ -5,7 +5,7 @@ import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import PageHeading from '@/Components/PageHeading';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Timeline({
@@ -15,7 +15,6 @@ export default function Timeline({
     transitionStyles = [],
     subtitleStyles = [],
 }) {
-    const { flash = {} } = usePage().props ?? {};
     const [sceneOrder, setSceneOrder] = useState(() => scenes.map((s) => s.id));
     const [sceneOverrides, setSceneOverrides] = useState(() =>
         Object.fromEntries(scenes.map((s) => [s.id, { duration_trimmed: s.duration_trimmed ?? s.duration ?? 0, transition_style: s.transition_style ?? '' }]))
@@ -105,12 +104,6 @@ export default function Timeline({
 
             <div className="py-6">
                 <div className="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
-                    {flash?.success && (
-                        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-                            {flash.success}
-                        </div>
-                    )}
-
                     <PageHeading
                         title={`Timeline: ${project.title}`}
                         description="Reorder scenes, trim duration, set transitions, and configure subtitles and music."

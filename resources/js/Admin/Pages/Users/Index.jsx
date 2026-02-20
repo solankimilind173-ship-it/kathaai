@@ -11,7 +11,6 @@ import { useRef, useState } from 'react';
 
 export default function AdminUsersIndex({ users, filters }) {
     const [deleteUser, setDeleteUser] = useState(null);
-    const flash = usePage().props?.flash ?? {};
     const fileInputRef = useRef(null);
 
     const handleImport = () => {
@@ -98,13 +97,6 @@ export default function AdminUsersIndex({ users, filters }) {
             header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Users</h2>}
         >
             <Head title="Admin – Users" />
-
-            {flash?.success && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{flash.success}</div>
-            )}
-            {flash?.error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{flash.error}</div>
-            )}
 
             <Card className="border-amber-200/20">
                 <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

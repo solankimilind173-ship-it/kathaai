@@ -1,9 +1,11 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import FlashToaster from '@/Components/FlashToaster';
 import { Link } from '@inertiajs/react';
 
 export default function GuestLayout({ children }) {
     return (
         <div className="flex min-h-screen flex-col items-center bg-gradient-to-b from-amber-50 to-stone-100 pt-6 sm:justify-center sm:pt-0">
+            <FlashToaster />
             <Link
                 href="/"
                 className="flex flex-col items-center rounded-2xl bg-white/90 px-8 py-6 shadow-lg ring-1 ring-amber-200/50 sm:px-10 sm:py-8"
