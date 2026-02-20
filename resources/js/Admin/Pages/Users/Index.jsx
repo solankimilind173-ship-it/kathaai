@@ -95,6 +95,10 @@ export default function AdminUsersIndex({ users, filters }) {
     return (
         <AdminLayout
             header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Users</h2>}
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Users' },
+            ]}
         >
             <Head title="Admin – Users" />
 
@@ -102,11 +106,14 @@ export default function AdminUsersIndex({ users, filters }) {
                 <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <form
                         method="get"
-                        className="flex gap-2"
+                        className="flex flex-wrap items-center gap-2"
                         onSubmit={(e) => {
                             e.preventDefault();
-                            const q = e.target.search?.value ?? '';
-                            router.get(route('admin.users.index'), { search: q }, { preserveState: true });
+                            const form = e.target;
+                            router.get(route('admin.users.index'), {
+                                search: form.search?.value ?? '',
+                                role: form.role?.value || undefined,
+                            }, { preserveState: true });
                         }}
                     >
                         <input
@@ -116,11 +123,21 @@ export default function AdminUsersIndex({ users, filters }) {
                             placeholder="Search by name or email..."
                             className="rounded-lg border border-amber-200/60 bg-white px-3 py-2 text-sm text-stone-800 shadow-sm focus:border-amber-400 focus:ring-1 focus:ring-amber-300"
                         />
+                        <select
+                            name="role"
+                            defaultValue={filters?.role ?? ''}
+                            className="rounded-lg border border-amber-200/60 bg-white px-3 py-2 text-sm text-stone-800"
+                        >
+                            <option value="">All roles</option>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                            <option value="super_admin">Super Admin</option>
+                        </select>
                         <PrimaryButton type="submit">Search</PrimaryButton>
                     </form>
                     <div className="flex flex-wrap items-center gap-2">
                         <Link href={route('admin.users.create')}><PrimaryButton>Create user</PrimaryButton></Link>
-                        <a href={route('admin.users.export', { search: filters?.search ?? '' })} className="rounded-lg border border-amber-200/60 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-amber-50">Export CSV</a>
+                        <a href={route('admin.users.export', { search: filters?.search ?? '', role: filters?.role ?? '' })} className="rounded-lg border border-amber-200/60 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-amber-50">Export CSV</a>
                         <input ref={fileInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={onFileChange} />
                         <button type="button" onClick={handleImport} className="rounded-lg border border-amber-200/60 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-amber-50">Import CSV</button>
                     </div>

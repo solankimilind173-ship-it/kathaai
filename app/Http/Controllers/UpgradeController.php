@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PaymentSuccess;
 use App\Models\Plan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 use Stripe\Checkout\Session as StripeSession;
@@ -71,6 +73,52 @@ class UpgradeController extends Controller
     }
 
     /**
+     * Send invoice and billing details email after successful payment.
+     */
+    private function sendPaymentSuccessEmail($user, Plan $plan, StripeSession $session): void
+    {
+        try {
+            $amountTotal = $session->amount_total ?? 0;
+            $currency = strtolower($session->currency ?? 'usd');
+            $amountFormatted = number_format($amountTotal / 100, 2);
+
+            $interval = 'monthly';
+            $invoiceNumber = null;
+            $invoicePdfUrl = null;
+            $receiptUrl = null;
+
+            $subscription = $session->subscription ?? null;
+            if ($subscription && isset($subscription->latest_invoice)) {
+                $invoice = $subscription->latest_invoice;
+                if (is_object($invoice)) {
+                    $invoiceNumber = $invoice->number ?? null;
+                    $invoicePdfUrl = $invoice->invoice_pdf ?? null;
+                    $receiptUrl = $invoice->hosted_invoice_url ?? null;
+                    if (isset($invoice->charge) && is_object($invoice->charge) && ! empty($invoice->charge->receipt_url)) {
+                        $receiptUrl = $invoice->charge->receipt_url;
+                    }
+                }
+                if (isset($subscription->interval)) {
+                    $interval = $subscription->interval === 'year' ? 'yearly' : 'monthly';
+                }
+            }
+
+            Mail::to($user->email)->send(new PaymentSuccess(
+                user: $user,
+                plan: $plan,
+                amountFormatted: $amountFormatted,
+                currency: $currency,
+                interval: $interval,
+                invoiceNumber: $invoiceNumber,
+                invoicePdfUrl: $invoicePdfUrl,
+                receiptUrl: $receiptUrl
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Payment success email failed: ' . $e->getMessage(), ['user_id' => $user->id]);
+        }
+    }
+
+    /**
      * Handle return from Stripe Checkout; assign plan from session metadata.
      */
     public function success(Request $request): RedirectResponse
@@ -88,7 +136,9 @@ class UpgradeController extends Controller
         Stripe::setApiKey($secret);
 
         try {
-            $session = StripeSession::retrieve($sessionId, ['expand' => ['subscription']]);
+            $session = StripeSession::retrieve($sessionId, [
+                'expand' => ['subscription', 'subscription.latest_invoice', 'subscription.latest_invoice.charge'],
+            ]);
         } catch (ApiErrorException $e) {
             Log::warning('Stripe session retrieve failed: ' . $e->getMessage());
             return redirect()->route('upgrade')->withErrors(['session' => 'Could not verify payment.']);
@@ -101,9 +151,15 @@ class UpgradeController extends Controller
             return redirect()->route('upgrade')->withErrors(['session' => 'No active subscription found. Payment may still be processing.']);
         }
 
+        $user = $request->user();
         $planId = $session->metadata->plan_id ?? null;
         if ($planId) {
-            $request->user()->update(['plan_id' => (int) $planId]);
+            $user->update(['plan_id' => (int) $planId]);
+        }
+
+        $plan = Plan::find($planId) ?? $user->plan;
+        if ($plan) {
+            $this->sendPaymentSuccessEmail($user, $plan, $session);
         }
 
         return redirect()->route('dashboard')->with('success', 'Your plan has been upgraded. Thank you!');

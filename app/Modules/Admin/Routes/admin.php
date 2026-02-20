@@ -41,3 +41,10 @@ Route::post('/users/{user}/credits', [UsersController::class, 'adjustCredits'])-
 Route::get('/projects', [ProjectsController::class, 'index'])->name('projects.index');
 Route::get('/projects/{project}', [ProjectsController::class, 'show'])->name('projects.show');
 Route::delete('/projects/{project}', [ProjectsController::class, 'destroy'])->name('projects.destroy');
+
+Route::get('/logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index'])->name('logs.index');
+Route::get('/failed-jobs', [\App\Modules\Admin\Controllers\FailedJobsController::class, 'index'])->name('failed-jobs.index');
+Route::post('/failed-jobs/{uuid}/retry', [\App\Modules\Admin\Controllers\FailedJobsController::class, 'retry'])->name('failed-jobs.retry');
+Route::post('/failed-jobs/retry-all', [\App\Modules\Admin\Controllers\FailedJobsController::class, 'retryAll'])->name('failed-jobs.retry-all');
+
+Route::get('/subscription-records', [\App\Modules\Admin\Controllers\SubscriptionRecordsController::class, 'index'])->name('subscription-records.index');

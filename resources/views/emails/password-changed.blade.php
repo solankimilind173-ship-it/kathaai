@@ -6,6 +6,7 @@
     <title>Password changed</title>
 </head>
 <body style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    @include('emails.partials.header')
     <h1 style="color: #b45309;">Password changed</h1>
     <p>Hi {{ $user->name }},</p>
     <p>Your password for {{ config('app.name') }} was changed successfully.</p>
@@ -20,5 +21,6 @@
     <p>
         <a href="{{ url('/forgot-password') }}" style="display: inline-block; padding: 10px 20px; background: #b45309; color: #fff; text-decoration: none; border-radius: 6px;">Reset password</a>
     </p>
+    @include('emails.partials.footer')
 </body>
 </html>

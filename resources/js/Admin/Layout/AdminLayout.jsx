@@ -1,9 +1,16 @@
 /**
  * Admin module layout. Wraps AuthenticatedLayout for admin-specific shell.
- * Use for all Admin pages so future admin-only chrome (e.g. breadcrumbs) lives here.
+ * Supports optional breadcrumbs (array of { label, href? }) above the header.
  */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Breadcrumbs from '@/Components/Breadcrumbs';
 
-export default function AdminLayout({ header, children }) {
-    return <AuthenticatedLayout header={header}>{children}</AuthenticatedLayout>;
+export default function AdminLayout({ header, children, breadcrumbs }) {
+    const headerContent = (
+        <>
+            {breadcrumbs?.length > 0 && <Breadcrumbs items={breadcrumbs} />}
+            {header}
+        </>
+    );
+    return <AuthenticatedLayout header={headerContent}>{children}</AuthenticatedLayout>;
 }

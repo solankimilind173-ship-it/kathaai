@@ -3,29 +3,120 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { flash } = usePage().props;
+    const showOtpStep = flash?.otp_sent && flash?.pending_email;
+
+    const registrationForm = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
     });
 
-    const submit = (e) => {
-        e.preventDefault();
+    const otpForm = useForm({
+        email: '',
+        otp: '',
+    });
 
-        post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
+    useEffect(() => {
+        if (flash?.pending_email) {
+            otpForm.setData('email', flash.pending_email);
+        }
+    }, [flash?.pending_email]);
+
+    const sendOtp = (e) => {
+        e.preventDefault();
+        registrationForm.post(route('register.send-otp'), {
+            onFinish: () =>
+                registrationForm.reset('password', 'password_confirmation'),
         });
     };
+
+    const verifyAndRegister = (e) => {
+        e.preventDefault();
+        otpForm.post(route('register'));
+    };
+
+    if (showOtpStep) {
+        return (
+            <GuestLayout>
+                <Head title="Verify email" />
+
+                <div className="mb-4 text-sm text-gray-600">
+                    We sent a 6-digit verification code to{' '}
+                    <strong>{flash.pending_email}</strong>. Enter it below.
+                </div>
+
+                <form onSubmit={verifyAndRegister}>
+                    <div>
+                        <InputLabel htmlFor="otp" value="Verification code" />
+
+                        <TextInput
+                            id="otp"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={6}
+                            placeholder="000000"
+                            value={otpForm.data.otp}
+                            className="mt-1 block w-full text-center text-lg tracking-[0.5em]"
+                            onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, '');
+                                otpForm.setData('otp', v.slice(0, 6));
+                            }}
+                            isFocused={true}
+                            required
+                        />
+
+                        <InputError
+                            message={otpForm.errors.otp}
+                            className="mt-2"
+                        />
+                    </div>
+
+                    <div className="mt-4 text-sm text-gray-600">
+                        Didn&apos;t receive the code?{' '}
+                        <Link
+                            href={route('register.resend-otp')}
+                            method="post"
+                            as="button"
+                            className="font-medium text-gray-900 underline hover:no-underline"
+                        >
+                            Resend code
+                        </Link>
+                    </div>
+
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <Link
+                            href={route('register')}
+                            className="rounded-md text-sm text-gray-600 underline hover:text-gray-900"
+                        >
+                            Use a different email
+                        </Link>
+
+                        <PrimaryButton
+                            type="submit"
+                            disabled={otpForm.processing}
+                        >
+                            Verify & Register
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </GuestLayout>
+        );
+    }
+
+    const { data, setData, processing, errors, reset } = registrationForm;
 
     return (
         <GuestLayout>
             <Head title="Register" />
 
-            <form onSubmit={submit}>
+            <form onSubmit={sendOtp}>
                 <div>
                     <InputLabel htmlFor="name" value="Name" />
 
@@ -110,8 +201,12 @@ export default function Register() {
                         Already registered?
                     </Link>
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
+                    <PrimaryButton
+                        type="submit"
+                        className="ms-4"
+                        disabled={processing}
+                    >
+                        Send verification code
                     </PrimaryButton>
                 </div>
             </form>

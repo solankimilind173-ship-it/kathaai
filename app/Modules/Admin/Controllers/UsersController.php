@@ -34,11 +34,17 @@ class UsersController extends Controller
             $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%"));
         }
+        if ($request->filled('role') && in_array($request->role, ['user', 'admin', 'super_admin'], true)) {
+            $query->where('role', $request->role);
+        }
         $users = $query->paginate(15)->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => ['search' => $search->toString()],
+            'filters' => [
+                'search' => $search->toString(),
+                'role' => $request->role,
+            ],
         ]);
     }
 
@@ -157,6 +163,9 @@ class UsersController extends Controller
         if ($search->isNotEmpty()) {
             $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%"));
+        }
+        if ($request->filled('role') && in_array($request->role, ['user', 'admin', 'super_admin'], true)) {
+            $query->where('role', $request->role);
         }
 
         $headers = [

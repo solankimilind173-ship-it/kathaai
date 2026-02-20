@@ -78,6 +78,7 @@ export default function AdminDashboard({
                     Admin Dashboard
                 </h2>
             }
+            breadcrumbs={[{ label: 'Admin' }]}
         >
             <Head title="Admin Dashboard" />
 

@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call(LanguageSeeder::class);
         $this->call(FeatureDefinitionSeeder::class);
         $this->call(PlanSeeder::class);
+        $this->call(VideoStyleSeeder::class);
         $this->call(UserSeeder::class);
         $this->call(AdminSeeder::class);
     }

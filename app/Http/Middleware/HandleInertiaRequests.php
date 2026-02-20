@@ -38,6 +38,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'status' => $request->session()->get('status'),
+                'otp_sent' => $request->session()->get('otp_sent'),
+                'pending_email' => $request->session()->get('pending_email'),
             ],
         ];
     }
