@@ -15,9 +15,11 @@
         "laravel/socialite": "*",
         "laravel/tinker": "^2.10.1",
         "openai-php/client": "^0.19.0",
+        "phpoffice/phpword": "^1.4",
         "pragmarx/google2fa": "^9.0",
         "predis/predis": "^3.4",
         "rap2hpoutre/laravel-log-viewer": "^2.5",
+        "smalot/pdfparser": "^2.12",
         "socialiteproviders/apple": "*",
         "tightenco/ziggy": "^2.0"
     },

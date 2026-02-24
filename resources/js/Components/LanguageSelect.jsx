@@ -1,5 +1,10 @@
 import Select from 'react-select';
 
+function sameId(a, b) {
+    if (a == null || b == null) return false;
+    return String(a) === String(b);
+}
+
 export default function LanguageSelect({
     languages = [],
     value = null,
@@ -13,9 +18,11 @@ export default function LanguageSelect({
         label: `${lang.name} (${lang.code})`
     }));
 
+    // Normalize: single-select can receive a single id or [id]; compare by string to avoid number/string mismatch
+    const rawSingle = Array.isArray(value) ? value[0] : value;
     const selectedValue = isMulti
-        ? options.filter(option => value?.includes(option.value))
-        : options.find(option => option.value === value) || null;
+        ? options.filter(option => Array.isArray(value) && value.some(v => sameId(v, option.value)))
+        : (options.find(option => sameId(option.value, rawSingle)) || null);
 
     return (
         <Select

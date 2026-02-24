@@ -60,7 +60,7 @@ export default function Index({
             <Head title="Settings" />
 
             <div className="py-8">
-                <div className="mx-auto max-w-4xl space-y-8 sm:px-6 lg:px-8">
+                <div className="w-full space-y-8">
                     {status && (
                         <div className="rounded-lg border border-amber-200/60 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
                             {status}

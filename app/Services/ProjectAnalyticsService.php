@@ -103,7 +103,7 @@ class ProjectAnalyticsService
             ->orderByDesc('created_at')
             ->value('created_at');
 
-        $lastSceneUpdated = $project->scenes()->orderByDesc('updated_at')->value('updated_at');
+        $lastSceneUpdated = $project->scenes()->orderByDesc('scenes.updated_at')->value('scenes.updated_at');
 
         $endTs = $start;
         if ($lastTransaction) {

@@ -14,10 +14,12 @@ use App\Models\ProjectEngagement;
 use App\Models\ProjectShareToken;
 use App\Models\Scene;
 use App\Models\SceneRenderSettings;
+use App\Models\VideoStyle;
 use App\Services\CreditCalculator;
 use App\Services\CreditService;
 use App\Services\NotificationService;
 use App\Services\ProjectAnalyticsService;
+use App\Services\StoryFileExtractor;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -86,6 +88,7 @@ class ProjectController extends Controller
             'dubLanguages',
             'shareToken',
             'renderLogs' => fn ($q) => $q->with('episode:id,title')->latest()->limit(100),
+            'renderRunLogs' => fn ($q) => $q->latest()->limit(50),
         ]);
 
         $user = auth()->user();
@@ -190,54 +193,98 @@ class ProjectController extends Controller
     {
         $user = auth()->user();
         $plan = $user->plan;
+        $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
         $planPayload = $plan
             ? [
                 'max_dubbing_languages' => $plan->max_dubbing_languages ?? 1,
                 'max_video_minutes' => $plan->max_video_minutes ?? 5,
                 'max_reels_per_episode' => $plan->max_reels_per_episode ?? 1,
                 'allow_4k' => $plan->allow_4k ?? false,
+                'max_episodes_per_day' => $episodeLimitService->maxEpisodesPerDay($user),
             ]
-            : ['max_dubbing_languages' => 1, 'max_video_minutes' => 5, 'max_reels_per_episode' => 1, 'allow_4k' => false];
+            : ['max_dubbing_languages' => 1, 'max_video_minutes' => 5, 'max_reels_per_episode' => 1, 'allow_4k' => false, 'max_episodes_per_day' => 1];
+
+        $videoFrames = config('video_types.frames', []);
+        $videoTypes = VideoStyle::orderBy('name')->get()->map(function (VideoStyle $style) {
+            return [
+                'id' => (string) $style->id,
+                'name' => $style->name,
+                'description' => $style->description ?? null,
+                'sample_image_url' => $style->sample_image_url ?? null,
+            ];
+        })->values()->all();
 
         return Inertia::render('Project/Pages/Create', [
             'languages' => Language::active()->get(),
             'books' => Book::orderBy('title')->get(['id', 'title', 'description']),
             'plan' => $planPayload,
+            'videoFrames' => $videoFrames,
+            'videoTypes' => $videoTypes,
+            'episodeLimit' => [
+                'max_per_day' => $planPayload['max_episodes_per_day'],
+                'used_today' => $episodeLimitService->episodesGeneratedToday($user),
+                'remaining_today' => $episodeLimitService->remainingSlotsToday($user),
+            ],
             'sceneGenerationCredits' => $creditService->sceneGenerationCost(),
             'userCredits' => (int) $user->credits,
             'hasEnoughForSceneGeneration' => $creditService->hasEnoughForSceneGeneration($user),
         ]);
     }
 
-    public function store(Request $request, CreditService $creditService, NotificationService $notificationService)
+    public function store(Request $request, CreditService $creditService, NotificationService $notificationService, StoryFileExtractor $fileExtractor)
     {
         $user = auth()->user();
         $plan = $user->plan;
 
-        $request->validate([
+        $rules = [
             'source_type' => 'required|in:library,uploaded',
             'title' => 'required|string|max:255',
             'book_id' => 'required_if:source_type,library|nullable|exists:books,id',
-            'story' => 'required_if:source_type,uploaded|nullable|string|max:50000',
+            'story' => 'nullable|string|max:50000',
+            'story_file' => 'nullable|file|max:' . (StoryFileExtractor::MAX_FILE_SIZE_MB * 1024) . '|mimes:pdf,doc,docx',
             'language_id' => 'nullable|exists:languages,id',
             'dub_languages' => 'nullable|array',
             'dub_languages.*' => 'exists:languages,id',
             'video_minutes' => 'nullable|integer|min:1|max:120',
             'quality' => 'nullable|in:1080p,4k',
+            'video_frame' => 'nullable|string|max:16',
+            'video_type' => 'nullable|exists:video_styles,id',
             'reels_per_episode' => 'nullable|integer|min:0',
             'intro_song' => 'nullable|boolean',
             'background_music' => 'nullable|boolean',
-        ]);
+        ];
+
+        $request->validate($rules);
 
         $sourceType = $request->source_type === 'library' ? SourceType::Library : SourceType::Uploaded;
+        $storyText = null;
+
         if ($sourceType === SourceType::Library) {
             $book = Book::findOrFail($request->book_id);
             if (empty(trim($book->content ?? ''))) {
                 return back()->withErrors(['book_id' => 'This book has no content yet.'])->withInput();
             }
         } else {
-            if (empty(trim($request->story ?? ''))) {
-                return back()->withErrors(['story' => 'Please provide your story text.'])->withInput();
+            $storyText = trim($request->story ?? '');
+            $storyFile = $request->file('story_file');
+
+            if ($storyFile) {
+                $validationErrors = $fileExtractor->validate($storyFile);
+                if ($validationErrors !== []) {
+                    return back()->withErrors(['story_file' => $validationErrors[0] ?? 'Invalid file.'])->withInput();
+                }
+                $extracted = $fileExtractor->extract($storyFile);
+                if ($extracted !== '') {
+                    $storyText = $extracted;
+                }
+            }
+
+            if (empty($storyText)) {
+                return back()->withErrors([
+                    'story' => $request->file('story_file')
+                        ? 'Could not extract text from the file. Please use a PDF or Word document with readable text, or paste your story below.'
+                        : 'Please provide your story text or upload a PDF or Word (.doc, .docx) file.',
+                ])->withInput();
             }
         }
 
@@ -263,12 +310,19 @@ class ProjectController extends Controller
             ])->withInput();
         }
 
+        $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
+        if (! $episodeLimitService->canGenerateEpisodesToday($user)) {
+            return back()->withErrors([
+                'episodes' => $episodeLimitService->limitReachedMessage($user),
+            ])->withInput();
+        }
+
         $project = Project::create([
             'user_id' => $user->id,
             'book_id' => $sourceType === SourceType::Library ? $request->book_id : null,
             'title' => $request->title,
             'description' => null,
-            'story_source' => $sourceType === SourceType::Uploaded ? $request->story : null,
+            'story_source' => $sourceType === SourceType::Uploaded ? $storyText : null,
             'source_type' => $sourceType,
             'is_public' => false,
             'status' => ProjectStatus::Draft,
@@ -276,6 +330,8 @@ class ProjectController extends Controller
             'language' => 'hindi',
             'video_minutes' => $request->video_minutes ?? 5,
             'quality' => $request->quality ?? '1080p',
+            'video_frame' => $request->filled('video_frame') ? $request->video_frame : null,
+            'video_type' => $request->filled('video_type') ? $request->video_type : null,
             'reels_per_episode' => (int) ($request->reels ?? 0),
             'intro_song' => (bool) ($request->intro_song ?? false),
             'background_music' => (bool) ($request->background_music ?? false),
@@ -324,7 +380,7 @@ class ProjectController extends Controller
                 'intro_song' => $project->intro_song,
                 'background_music' => $project->background_music,
             ]);
-            $clone->dubLanguages()->sync($project->dubLanguages()->pluck('id')->all());
+            $clone->dubLanguages()->sync($project->dubLanguages()->get()->pluck('id')->all());
 
             $charMap = [];
             foreach ($project->characters as $char) {
@@ -424,6 +480,12 @@ class ProjectController extends Controller
         }
         if ($project->is_archived) {
             return redirect()->route('projects.show', $project)->withErrors(['project' => 'Cannot retry an archived project.']);
+        }
+        $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
+        if (! $episodeLimitService->canGenerateEpisodesToday($project->user)) {
+            return redirect()->route('projects.show', $project)->withErrors([
+                'episodes' => $episodeLimitService->limitReachedMessage($project->user),
+            ]);
         }
         $project->update(['status' => ProjectStatus::Generating]);
         GenerateProjectStructureJob::dispatch($project);

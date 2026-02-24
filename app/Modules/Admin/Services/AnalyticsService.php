@@ -42,19 +42,20 @@ class AnalyticsService
         $totals = ($from !== null && $to !== null)
             ? $this->getDashboardMetricsBatch($from, $to)
             : [
-                'total_users' => User::count(),
-                'total_projects' => Project::count(),
-                'total_episodes' => Episode::count(),
-                'total_scenes' => Scene::count(),
-                'total_credits_used' => (int) abs(CreditTransaction::where('amount', '<', 0)->sum('amount')),
+                'total_users' => User::nonAdmin()->count(),
+                'total_projects' => Project::whereHas('user', fn ($q) => $q->nonAdmin())->count(),
+                'total_episodes' => Episode::whereHas('project.user', fn ($q) => $q->nonAdmin())->count(),
+                'total_scenes' => Scene::whereHas('episode.project.user', fn ($q) => $q->nonAdmin())->count(),
+                'total_credits_used' => (int) abs(CreditTransaction::whereHas('user', fn ($q) => $q->nonAdmin())->where('amount', '<', 0)->sum('amount')),
             ];
 
-        $activeSubscriptions = Subscription::where('status', 'active')->count();
+        $activeSubscriptions = Subscription::whereHas('user', fn ($q) => $q->nonAdmin())->where('status', 'active')->count();
         if ($activeSubscriptions === 0) {
-            $activeSubscriptions = User::whereNotNull('plan_id')->count();
+            $activeSubscriptions = User::nonAdmin()->whereNotNull('plan_id')->count();
         }
 
         $revenueQuery = Subscription::query()
+            ->whereHas('user', fn ($q) => $q->nonAdmin())
             ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
             ->selectRaw('COALESCE(SUM(plans.price), 0) as total');
         if ($from !== null) {
@@ -66,8 +67,8 @@ class AnalyticsService
         $totalRevenue = (float) $revenueQuery->value('total');
 
         $weekStart = Carbon::now()->startOfWeek();
-        $thisWeekEngagements = Project::where('created_at', '>=', $weekStart)->count()
-            + Episode::where('created_at', '>=', $weekStart)->count();
+        $thisWeekEngagements = Project::whereHas('user', fn ($q) => $q->nonAdmin())->where('created_at', '>=', $weekStart)->count()
+            + Episode::whereHas('project.user', fn ($q) => $q->nonAdmin())->where('created_at', '>=', $weekStart)->count();
 
         $activeJobs = (int) DB::table('jobs')->count();
         $failedJobsQuery = DB::table('failed_jobs');
@@ -95,16 +96,18 @@ class AnalyticsService
 
     /**
      * Single-query aggregation for dashboard counts in a date range (uses indexes).
+     * Counts only non-admin users and their projects, episodes, scenes, and credits.
      */
     private function getDashboardMetricsBatch(Carbon $from, Carbon $to): array
     {
+        $adminRoles = "'" . implode("','", User::ADMIN_ROLES) . "'";
         $row = DB::selectOne(
-            'SELECT
-                (SELECT COUNT(*) FROM users WHERE created_at >= ? AND created_at <= ?) AS total_users,
-                (SELECT COUNT(*) FROM projects WHERE created_at >= ? AND created_at <= ?) AS total_projects,
-                (SELECT COUNT(*) FROM episodes WHERE created_at >= ? AND created_at <= ?) AS total_episodes,
-                (SELECT COUNT(*) FROM scenes WHERE created_at >= ? AND created_at <= ?) AS total_scenes,
-                (SELECT COALESCE(ABS(SUM(amount)), 0) FROM credit_transactions WHERE amount < 0 AND created_at >= ? AND created_at <= ?) AS total_credits_used',
+            "SELECT
+                (SELECT COUNT(*) FROM users WHERE role NOT IN ({$adminRoles}) AND created_at >= ? AND created_at <= ?) AS total_users,
+                (SELECT COUNT(*) FROM projects p INNER JOIN users u ON p.user_id = u.id WHERE u.role NOT IN ({$adminRoles}) AND p.created_at >= ? AND p.created_at <= ?) AS total_projects,
+                (SELECT COUNT(*) FROM episodes e INNER JOIN projects p ON e.project_id = p.id INNER JOIN users u ON p.user_id = u.id WHERE u.role NOT IN ({$adminRoles}) AND e.created_at >= ? AND e.created_at <= ?) AS total_episodes,
+                (SELECT COUNT(*) FROM scenes s INNER JOIN episodes e ON s.episode_id = e.id INNER JOIN projects p ON e.project_id = p.id INNER JOIN users u ON p.user_id = u.id WHERE u.role NOT IN ({$adminRoles}) AND s.created_at >= ? AND s.created_at <= ?) AS total_scenes,
+                (SELECT COALESCE(ABS(SUM(ct.amount)), 0) FROM credit_transactions ct INNER JOIN users u ON ct.user_id = u.id WHERE u.role NOT IN ({$adminRoles}) AND ct.amount < 0 AND ct.created_at >= ? AND ct.created_at <= ?) AS total_credits_used",
             [$from, $to, $from, $to, $from, $to, $from, $to, $from, $to]
         );
 
@@ -160,6 +163,7 @@ class AnalyticsService
             ? "DATE_FORMAT(subscriptions.created_at, '{$dateFormat}')"
             : "strftime('{$dateFormat}', subscriptions.created_at)";
         $rows = Subscription::query()
+            ->whereHas('user', fn ($q) => $q->nonAdmin())
             ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
             ->whereBetween('subscriptions.created_at', [$from, $to])
             ->selectRaw("{$dateExpr} as period, COALESCE(SUM(plans.price), 0) as total")
@@ -176,6 +180,7 @@ class AnalyticsService
             ? "DATE_FORMAT(users.created_at, '{$dateFormat}')"
             : "strftime('{$dateFormat}', users.created_at)";
         $rows = User::query()
+            ->nonAdmin()
             ->whereBetween('created_at', [$from, $to])
             ->selectRaw("{$dateExpr} as period, COUNT(*) as count")
             ->groupBy('period')
@@ -188,12 +193,13 @@ class AnalyticsService
     {
         $driver = DB::connection()->getDriverName();
         $dateExpr = $driver === 'mysql'
-            ? "DATE_FORMAT(created_at, '{$dateFormat}')"
-            : "strftime('{$dateFormat}', created_at)";
+            ? "DATE_FORMAT(credit_transactions.created_at, '{$dateFormat}')"
+            : "strftime('{$dateFormat}', credit_transactions.created_at)";
         $rows = CreditTransaction::query()
+            ->whereHas('user', fn ($q) => $q->nonAdmin())
             ->where('amount', '<', 0)
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw("{$dateExpr} as period, COALESCE(SUM(ABS(amount)), 0) as total")
+            ->whereBetween('credit_transactions.created_at', [$from, $to])
+            ->selectRaw("{$dateExpr} as period, COALESCE(SUM(ABS(credit_transactions.amount)), 0) as total")
             ->groupBy('period')
             ->orderBy('period')
             ->get();
@@ -204,10 +210,11 @@ class AnalyticsService
     {
         $driver = DB::connection()->getDriverName();
         $dateExpr = $driver === 'mysql'
-            ? "DATE_FORMAT(created_at, '{$dateFormat}')"
-            : "strftime('{$dateFormat}', created_at)";
+            ? "DATE_FORMAT(projects.created_at, '{$dateFormat}')"
+            : "strftime('{$dateFormat}', projects.created_at)";
         $rows = Project::query()
-            ->whereBetween('created_at', [$from, $to])
+            ->whereHas('user', fn ($q) => $q->nonAdmin())
+            ->whereBetween('projects.created_at', [$from, $to])
             ->selectRaw("{$dateExpr} as period, COUNT(*) as count")
             ->groupBy('period')
             ->orderBy('period')

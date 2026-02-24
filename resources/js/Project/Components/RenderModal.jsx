@@ -18,6 +18,7 @@ export default function RenderModal({
 }) {
     const [settings, setSettings] = useState({
         resolution: '1080p',
+        video_format: 'youtube',
         format: '16:9',
         fps: 24,
         subtitle_style: 'default',
@@ -32,8 +33,9 @@ export default function RenderModal({
     const fetchEstimate = useCallback(() => {
         if (!project?.id) return;
         setLoading(true);
+        const payload = { ...settings, format: settings.video_format === 'instagram_reels' ? '9:16' : '16:9' };
         axios
-            .post(route('projects.render.estimate', project), settings)
+            .post(route('projects.render.estimate', project), payload)
             .then(({ data }) =>
                 setEstimate({
                     cost: data.cost ?? 0,
@@ -43,7 +45,7 @@ export default function RenderModal({
             )
             .catch(() => setEstimate((e) => ({ ...e, cost: 0 })))
             .finally(() => setLoading(false));
-    }, [project?.id, settings.resolution, settings.format, settings.fps, settings.background_music, userCredits]);
+    }, [project?.id, settings.resolution, settings.video_format, settings.fps, settings.background_music, userCredits]);
 
     useEffect(() => {
         if (open) fetchEstimate();
@@ -52,7 +54,8 @@ export default function RenderModal({
     const handleSubmit = (e) => {
         e.preventDefault();
         setSubmitting(true);
-        onSubmit(settings, () => setSubmitting(false));
+        const payload = { ...settings, format: settings.video_format === 'instagram_reels' ? '9:16' : '16:9' };
+        onSubmit(payload, () => setSubmitting(false));
     };
 
     const canSubmit = estimate.user_credits >= estimate.cost && estimate.cost >= 0;
@@ -75,15 +78,18 @@ export default function RenderModal({
                         </select>
                     </div>
                     <div>
-                        <InputLabel value="Format" />
+                        <InputLabel value="Video format" />
                         <select
-                            value={settings.format}
-                            onChange={(e) => setSettings((s) => ({ ...s, format: e.target.value }))}
+                            value={settings.video_format}
+                            onChange={(e) => setSettings((s) => ({ ...s, video_format: e.target.value }))}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                         >
-                            <option value="16:9">16:9</option>
-                            <option value="9:16">9:16</option>
+                            <option value="youtube">YouTube (16:9)</option>
+                            <option value="instagram_reels">Instagram Reels (9:16)</option>
                         </select>
+                        <p className="mt-1 text-xs text-stone-500">
+                            {settings.video_format === 'instagram_reels' ? 'Vertical 9:16 — thumbnail and caption with 10 hashtags will be generated.' : 'Landscape 16:9 — thumbnail and caption with 10 hashtags will be generated.'}
+                        </p>
                     </div>
                     <div>
                         <InputLabel value="FPS" />

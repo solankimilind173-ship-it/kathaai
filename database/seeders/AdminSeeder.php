@@ -13,7 +13,7 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        $email = 'superadmin@kathaai.com';
+        $email = 'superadmin@kathaai.in';
 
         if (User::where('email', $email)->exists()) {
             return;

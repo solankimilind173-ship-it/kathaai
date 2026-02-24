@@ -30,8 +30,8 @@ class DashboardController extends Controller
         $metrics = Cache::remember($cacheKey.'.metrics', self::DASHBOARD_CACHE_TTL_SECONDS, fn () => $this->analytics->getDashboardMetrics($from, $to));
         $chartData = Cache::remember($cacheKey.'.charts', self::DASHBOARD_CACHE_TTL_SECONDS, fn () => $this->analytics->getChartData($from, $to));
 
-        $recentUsers = User::with('plan')->latest()->take(5)->get();
-        $recentProjects = Project::with(['user', 'user.plan'])->latest()->take(5)->get();
+        $recentUsers = User::nonAdmin()->with('plan')->latest()->take(5)->get();
+        $recentProjects = Project::whereHas('user', fn ($q) => $q->nonAdmin())->with(['user', 'user.plan'])->latest()->take(5)->get();
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $metrics,

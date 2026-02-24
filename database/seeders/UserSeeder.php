@@ -14,7 +14,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $email = 'kathaai@mailinator.com';
+        $email = 'milinds@kathaai.in';
 
         $plan = Plan::where('slug', 'enterprise')->first()
             ?? Plan::where('is_active', true)->orderByDesc('price')->first();

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Project;
 use App\Models\Episode;
+use App\Services\EpisodeGenerationLimitService;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -28,10 +29,31 @@ class GenerateEpisodesJob implements ShouldQueue
         $this->project = $project;
     }
 
-    public function handle(OpenAIService $ai)
+    public function handle(OpenAIService $ai, EpisodeGenerationLimitService $limitService): void
     {
         $project = $this->project->fresh();
         if (! $project) {
+            return;
+        }
+
+        $user = $project->user;
+        if (! $user) {
+            return;
+        }
+
+        $remainingSlots = $limitService->remainingSlotsToday($user);
+        if ($remainingSlots <= 0) {
+            Log::info('GenerateEpisodesJob: daily episode limit reached', [
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+            ]);
+            $project->update(['status' => \App\Enums\ProjectStatus::Failed]);
+            app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                $user,
+                $project,
+                'Daily limit reached',
+                $limitService->limitReachedMessage($user)
+            );
             return;
         }
 
@@ -43,9 +65,12 @@ class GenerateEpisodesJob implements ShouldQueue
 
             $episodes = $ai->generateEpisodes($story);
 
+            // Cap to plan's daily episode generation limit (e.g. 1 for Basic, more for higher plans)
+            $episodesToCreate = array_slice($episodes, 0, $remainingSlots);
+
             $episodeNumber = (int) Episode::where('project_id', $project->id)->max('episode_number') + 1;
 
-            foreach ($episodes as $ep) {
+            foreach ($episodesToCreate as $ep) {
                 $episode = Episode::create([
                     'project_id'        => $project->id,
                     'title'             => $ep['title'],
@@ -57,15 +82,21 @@ class GenerateEpisodesJob implements ShouldQueue
                 GenerateScenesJob::dispatch($episode);
             }
 
-            $project->load('user');
-            if ($project->user) {
-                app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
-                    $project->user,
-                    $project,
-                    'Episodes generated',
-                    'Episodes have been created and scene generation has been queued for each.'
-                );
+            $createdCount = count($episodesToCreate);
+            $message = $createdCount > 0
+                ? "{$createdCount} episode(s) have been created and scene generation has been queued."
+                : 'Daily episode generation limit reached. Try again tomorrow or upgrade your plan.';
+
+            if ($createdCount > 0 && $createdCount < count($episodes)) {
+                $message .= ' Your plan allows ' . $limitService->maxEpisodesPerDay($user) . ' episode(s) per day.';
             }
+
+            app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                $user,
+                $project,
+                'Episodes generated',
+                $message
+            );
         } catch (Throwable $e) {
             Log::error('GenerateEpisodesJob failed', [
                 'project_id' => $project->id,

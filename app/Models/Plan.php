@@ -74,7 +74,7 @@ class Plan extends Model
     {
         $featureKeys = [
             'voice_languages', 'max_export_resolution', 'allow_background_music', 'allow_intro_song_generation',
-            'max_episodes_per_project', 'priority_rendering_queue', 'max_dubbing_languages', 'allow_4k',
+            'max_episodes_per_project', 'max_episodes_per_day', 'priority_rendering_queue', 'max_dubbing_languages', 'allow_4k',
             'allow_voice_style_selection', 'allow_multiple_video_styles', 'max_reels_per_episode',
             'max_video_minutes', 'max_projects',
         ];

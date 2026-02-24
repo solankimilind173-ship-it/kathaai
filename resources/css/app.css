@@ -15,6 +15,7 @@
         font-feature-settings: "kern" 1, "liga" 1;
         /* Slightly improve legibility for small text */
         font-optical-sizing: auto;
+        overflow-x: hidden;
     }
     /* Avoid thin or blurry text on light backgrounds */
     p, span, li, dd, dt {

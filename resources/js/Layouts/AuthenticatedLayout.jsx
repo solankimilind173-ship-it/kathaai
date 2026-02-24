@@ -49,17 +49,17 @@ export default function AuthenticatedLayout({ header, children }) {
             </div>
 
             {/* Main content - offset by sidebar on desktop, below mobile header on small screens */}
-            <main className={`pt-16 transition-[padding] duration-300 lg:pt-0 ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64'}`}>
+            <main className={`min-h-screen w-full overflow-x-auto transition-[padding] duration-300 pt-16 lg:pt-0 ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64'}`}>
                 <div className="min-h-screen">
                     {header && (
                         <header className="sticky top-16 z-10 border-b border-amber-200/50 bg-white/90 py-4 shadow-sm backdrop-blur-md lg:top-0 lg:pt-4">
-                            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-stone-800">
+                            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 text-stone-800">
                                 {header}
                             </div>
                         </header>
                     )}
 
-                    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                    <div className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
                         <FlashToaster />
                         {children}
                     </div>

@@ -49,7 +49,7 @@ export default function HelpIndex() {
             <Head title="Help" />
 
             <div className="py-8">
-                <div className="mx-auto max-w-3xl space-y-8 sm:px-6 lg:px-8">
+                <div className="w-full space-y-8">
                     <Card className="border-amber-200/20 p-6">
                         <h3 className="font-display text-lg font-semibold text-stone-900">Getting started</h3>
                         <p className="mt-2 text-sm text-stone-600">

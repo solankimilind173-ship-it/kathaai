@@ -16,7 +16,7 @@ export default function GuestLayout({ children }) {
                 </span>
             </Link>
 
-            <div className="mt-8 w-full overflow-hidden rounded-xl border border-amber-200/40 bg-white px-6 py-6 shadow-lg sm:max-w-md">
+            <div className="mt-8 w-full max-w-full overflow-hidden rounded-xl border border-amber-200/40 bg-white px-4 py-6 shadow-lg sm:max-w-md sm:px-6">
                 {children}
             </div>
         </div>

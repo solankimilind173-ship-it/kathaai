@@ -16,11 +16,10 @@ function CheckIcon({ className = 'h-5 w-5' }) {
 function formatPrice(price) {
     if (price == null) return '—';
     const n = Number(price);
-    if (n >= 100) return `₹${(n / 100).toFixed(0)}`;
-    return `₹${n}`;
+    return `₹${n.toLocaleString('en-IN')}`;
 }
 
-export default function Upgrade({ plans = [], currentPlan = null, stripeConfigured = false, yearlyDiscountPercent = 20 }) {
+export default function Upgrade({ plans = [], currentPlan = null, yearlyDiscountPercent = 20 }) {
     const [interval, setInterval] = useState('monthly');
     const { errors } = usePage().props;
 
@@ -40,15 +39,10 @@ export default function Upgrade({ plans = [], currentPlan = null, stripeConfigur
             <Head title="Upgrade – Choose a plan" />
 
             <div className="py-6">
-                <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <div className="w-full">
                     {(errors?.plan || errors?.stripe) && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                             <InputError message={errors.plan || errors.stripe} />
-                        </div>
-                    )}
-                    {!stripeConfigured && (
-                        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                            Stripe is not configured yet. Add <code className="rounded bg-amber-100 px-1">STRIPE_KEY</code> and <code className="rounded bg-amber-100 px-1">STRIPE_SECRET</code> to your <code className="rounded bg-amber-100 px-1">.env</code>, and set Stripe Price IDs in the plans table or via <code className="rounded bg-amber-100 px-1">STRIPE_PRICE_*_MONTHLY/YEARLY</code> env variables.
                         </div>
                     )}
 
@@ -102,7 +96,7 @@ export default function Upgrade({ plans = [], currentPlan = null, stripeConfigur
                                 : baseYearly;
                             const price = isYearly ? (discountedYearly ?? baseYearly) : plan.price;
                             const isCurrentPlan = currentPlan && currentPlan.id === plan.id;
-                            const canSubscribe = stripeConfigured && !isCurrentPlan;
+                            const canSubscribe = !isCurrentPlan;
                             const showOriginalYearly = isYearly && baseYearly != null && yearlyDiscountPercent > 0 && discountedYearly !== baseYearly;
 
                             return (
@@ -158,19 +152,19 @@ export default function Upgrade({ plans = [], currentPlan = null, stripeConfigur
                                             <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />
                                             {plan.max_reels_per_episode} reels per episode
                                         </li>
-                                        {plan.allow_4k && (
+                                        {Boolean(plan.allow_4k) && (
                                             <li className="flex items-center gap-2 text-sm text-stone-700">
                                                 <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />
                                                 4K quality
                                             </li>
                                         )}
-                                        {plan.allow_intro_song_generation && (
+                                        {Boolean(plan.allow_intro_song_generation) && (
                                             <li className="flex items-center gap-2 text-sm text-stone-700">
                                                 <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />
                                                 Intro song generation
                                             </li>
                                         )}
-                                        {plan.allow_background_music && (
+                                        {Boolean(plan.allow_background_music) && (
                                             <li className="flex items-center gap-2 text-sm text-stone-700">
                                                 <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />
                                                 Background music
@@ -187,7 +181,6 @@ export default function Upgrade({ plans = [], currentPlan = null, stripeConfigur
                                                 method="post"
                                                 action={checkoutUrl}
                                                 className="w-full"
-                                                onSubmit={(e) => !canSubscribe && e.preventDefault()}
                                             >
                                                 <input type="hidden" name="plan_id" value={plan.id} />
                                                 <input type="hidden" name="interval" value={interval} />

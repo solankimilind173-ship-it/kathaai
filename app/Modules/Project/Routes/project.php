@@ -6,6 +6,7 @@ use App\Modules\Project\Controllers\ProjectController;
 use App\Modules\Project\Controllers\RenderController;
 use App\Modules\Project\Controllers\SceneController;
 use App\Modules\Project\Controllers\TimelineController;
+use App\Modules\Project\Controllers\VideoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +40,8 @@ Route::get('/projects/{project}/timeline', [TimelineController::class, 'show'])-
 Route::patch('/projects/{project}/timeline', [TimelineController::class, 'update'])->name('timeline.update');
 
 Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+Route::get('/projects/{project}/videos/{renderLog}', [VideoController::class, 'show'])->name('projects.videos.show');
+Route::get('/projects/{project}/videos/{renderLog}/download', [VideoController::class, 'download'])->name('projects.videos.download');
 Route::post('/projects/{project}/render/estimate', [RenderController::class, 'estimateCost'])->name('projects.render.estimate');
 Route::post('/projects/{project}/render', [RenderController::class, 'start'])->name('projects.render.start');
 Route::post('/projects/{project}/retry-render', [RenderController::class, 'retryRender'])->name('projects.retry-render');

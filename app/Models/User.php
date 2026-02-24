@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -51,6 +52,18 @@ class User extends Authenticatable
     public function hasTwoFactorEnabled(): bool
     {
         return !empty($this->two_factor_confirmed_at);
+    }
+
+    /** Role values that are considered platform admins (excluded from user-only analytics). */
+    public const ADMIN_ROLES = ['admin', 'super_admin'];
+
+    /**
+     * Scope to only non-admin users (excludes admin and super_admin).
+     * Use for dashboard/analytics when showing "users" data only.
+     */
+    public function scopeNonAdmin(Builder $query): Builder
+    {
+        return $query->whereNotIn('role', self::ADMIN_ROLES);
     }
 
     public function projects()

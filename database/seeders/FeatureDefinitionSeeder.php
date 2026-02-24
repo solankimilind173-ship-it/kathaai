@@ -19,6 +19,7 @@ class FeatureDefinitionSeeder extends Seeder
             ['key' => 'allow_background_music', 'label' => 'Background music', 'type' => 'boolean', 'options' => null, 'sort_order' => 30],
             ['key' => 'allow_intro_song_generation', 'label' => 'Intro song generation', 'type' => 'boolean', 'options' => null, 'sort_order' => 40],
             ['key' => 'max_episodes_per_project', 'label' => 'Max episodes per project', 'type' => 'integer', 'options' => null, 'sort_order' => 50],
+            ['key' => 'max_episodes_per_day', 'label' => 'Max episode generations per day', 'type' => 'integer', 'options' => null, 'sort_order' => 55],
             ['key' => 'priority_rendering_queue', 'label' => 'Priority rendering queue', 'type' => 'boolean', 'options' => null, 'sort_order' => 60],
             ['key' => 'max_dubbing_languages', 'label' => 'Max dubbing languages', 'type' => 'integer', 'options' => null, 'sort_order' => 70],
             ['key' => 'allow_4k', 'label' => 'Allow 4K export', 'type' => 'boolean', 'options' => null, 'sort_order' => 80],

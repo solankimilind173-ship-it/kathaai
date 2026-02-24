@@ -345,6 +345,7 @@ export default function Show({
     const [showRenderModal, setShowRenderModal] = useState(false);
     const [renderSettings, setRenderSettings] = useState({
         resolution: '1080p',
+        video_format: 'youtube',
         format: '16:9',
         fps: 24,
         subtitle_style: 'default',
@@ -358,12 +359,13 @@ export default function Show({
 
     const fetchRenderEstimate = useCallback(() => {
         setRenderEstimateLoading(true);
+        const payload = { ...renderSettings, format: renderSettings.video_format === 'instagram_reels' ? '9:16' : '16:9' };
         axios
-            .post(route('projects.render.estimate', project), renderSettings)
+            .post(route('projects.render.estimate', project), payload)
             .then(({ data }) => setRenderEstimate({ cost: data.cost ?? 0, duration_minutes: data.duration_minutes ?? 0, user_credits: data.user_credits ?? userCredits }))
             .catch(() => setRenderEstimate((prev) => ({ ...prev, cost: 0 })))
             .finally(() => setRenderEstimateLoading(false));
-    }, [project, renderSettings.resolution, renderSettings.format, renderSettings.fps, renderSettings.background_music, userCredits]);
+    }, [project, renderSettings.resolution, renderSettings.video_format, renderSettings.fps, renderSettings.background_music, userCredits]);
 
     useEffect(() => {
         if (showRenderModal) fetchRenderEstimate();
@@ -429,7 +431,7 @@ export default function Show({
             <Head title={project.title} />
 
             <div className={viewOnly ? '' : 'py-6'}>
-                <div className="mx-auto max-w-7xl space-y-8 sm:px-6 lg:px-8">
+                <div className="w-full space-y-8">
                     <PageHeading
                         title={project.title}
                         description={`${project.episodes_count ?? 0} episodes · ${project.characters_count ?? 0} characters`}
@@ -782,7 +784,48 @@ export default function Show({
                         )}
                     </Card>
 
-                    {/* 5. Render History */}
+                    {/* 5. Video outputs (render runs with format, thumbnail, title, description, hashtags) */}
+                    {!viewOnly && (project.render_run_logs?.length > 0) && (
+                    <Card>
+                        <Card.Header>
+                            <Card.Title>Video outputs</Card.Title>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Renders by format (YouTube or Instagram Reels). Each includes title, description and 10 hashtags for sharing.
+                            </p>
+                        </Card.Header>
+                        <div className="divide-y divide-gray-200">
+                            {project.render_run_logs.map((run) => (
+                                <div key={run.id} className="p-4">
+                                    <div className="flex gap-4">
+                                        <Link href={route('projects.videos.show', [project.id, run.id])} className="flex-shrink-0 rounded focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+                                            {run.thumbnail_url ? (
+                                                <img src={run.thumbnail_url} alt="" className="h-24 w-auto rounded border border-gray-200 object-cover hover:border-amber-400 transition-colors" />
+                                            ) : (
+                                                <div className="flex h-24 w-32 flex-shrink-0 items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400 hover:border-amber-300 hover:bg-amber-50/30 transition-colors">
+                                                    {run.video_format_label === 'Instagram Reels' ? '9:16' : '16:9'}
+                                                </div>
+                                            )}
+                                        </Link>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-medium uppercase text-amber-600">{run.video_format_label ?? run.video_format ?? 'Video'}</p>
+                                            <Link href={route('projects.videos.show', [project.id, run.id])} className="mt-1 block font-medium text-gray-900 hover:text-amber-700">
+                                                {run.video_title || 'View video'}
+                                            </Link>
+                                            {run.video_description && <p className="mt-1 line-clamp-2 text-sm text-gray-600">{run.video_description}</p>}
+                                            {run.hashtags && <p className="mt-2 text-xs text-gray-500 break-words">{run.hashtags}</p>}
+                                            <p className="mt-1 text-xs text-gray-400">{run.created_at ? formatDate(run.created_at) : ''} · {run.status ?? '—'}</p>
+                                            <Link href={route('projects.videos.show', [project.id, run.id])} className="mt-2 inline-block text-sm font-medium text-amber-600 hover:text-amber-700">
+                                                View & download →
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                    )}
+
+                    {/* 6. Render History */}
                     {!viewOnly && (
                     <Card>
                         <Card.Header>
@@ -848,7 +891,7 @@ export default function Show({
                     </Card>
                     )}
 
-                    {/* 6. Analytics */}
+                    {/* 7. Analytics */}
                     {!viewOnly && (
                     <Card>
                         <Card.Header>
@@ -921,15 +964,16 @@ export default function Show({
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Format</label>
+                                    <label className="block text-sm font-medium text-gray-700">Video format</label>
                                     <select
-                                        value={renderSettings.format}
-                                        onChange={(e) => setRenderSettings((s) => ({ ...s, format: e.target.value }))}
+                                        value={renderSettings.video_format}
+                                        onChange={(e) => setRenderSettings((s) => ({ ...s, video_format: e.target.value, format: e.target.value === 'instagram_reels' ? '9:16' : '16:9' }))}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                     >
-                                        <option value="16:9">16:9</option>
-                                        <option value="9:16">9:16</option>
+                                        <option value="youtube">YouTube (16:9)</option>
+                                        <option value="instagram_reels">Instagram Reels (9:16)</option>
                                     </select>
+                                    <p className="mt-1 text-xs text-gray-500">Title, description and 10 hashtags will be generated for sharing.</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">FPS</label>
@@ -988,7 +1032,8 @@ export default function Show({
                                     disabled={renderSubmitting || renderEstimateLoading || renderEstimate.cost > (renderEstimate.user_credits ?? 0)}
                                     onClick={() => {
                                         setRenderSubmitting(true);
-                                        router.post(route('projects.render.start', project), renderSettings, {
+                                        const payload = { ...renderSettings, format: renderSettings.video_format === 'instagram_reels' ? '9:16' : '16:9' };
+                                        router.post(route('projects.render.start', project), payload, {
                                             onFinish: () => setRenderSubmitting(false),
                                             onSuccess: () => setShowRenderModal(false),
                                         });

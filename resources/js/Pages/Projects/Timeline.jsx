@@ -103,7 +103,7 @@ export default function Timeline({
             <Head title={`Timeline — ${project.title}`} />
 
             <div className="py-6">
-                <div className="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
+                <div className="w-full space-y-6">
                     <PageHeading
                         title={`Timeline: ${project.title}`}
                         description="Reorder scenes, trim duration, set transitions, and configure subtitles and music."

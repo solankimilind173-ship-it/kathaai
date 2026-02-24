@@ -27,8 +27,8 @@ export default function TwoFactorSetup({ qrSvg, secret }) {
             <Head title="Set up 2FA" />
 
             <div className="py-12">
-                <div className="mx-auto max-w-xl space-y-6 sm:px-6 lg:px-8">
-                    <Card className="p-6">
+                <div className="w-full space-y-6">
+                    <Card className="mx-auto max-w-xl p-6">
                         <p className="text-sm text-stone-600">
                             Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the code below.
                         </p>

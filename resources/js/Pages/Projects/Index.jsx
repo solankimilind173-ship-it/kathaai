@@ -96,8 +96,9 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
 
     const items = projects.data ?? projects;
     const pagination = projects.data ? projects : null;
-    const showArchived = !!data.archived;
-    const hasFilters = data.search || data.status || data.date_from || data.date_to || data.archived;
+    // Use filters from URL/props for tab highlight so it stays correct after navigation
+    const showArchived = !!filters.archived;
+    const hasFilters = data.search || data.status || data.date_from || data.date_to || !!filters.archived;
 
     return (
         <AuthenticatedLayout
@@ -108,7 +109,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
             <Head title="My Projects" />
 
             <div className="py-6">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <div className="w-full">
                     {(pageErrors?.credits) && (
                         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                             {pageErrors.credits}

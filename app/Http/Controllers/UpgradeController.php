@@ -23,17 +23,40 @@ class UpgradeController extends Controller
     {
         $plans = Plan::where('is_active', true)
             ->orderBy('price')
-            ->get();
+            ->get()
+            ->map(fn (Plan $plan) => $this->planForFrontend($plan));
 
         $user = $request->user();
-        $currentPlan = $user->plan;
+        $currentPlan = $user->plan ? $this->planForFrontend($user->plan) : null;
 
         return Inertia::render('Upgrade', [
             'plans' => $plans,
             'currentPlan' => $currentPlan,
-            'stripeConfigured' => (bool) config('services.stripe.secret'),
             'yearlyDiscountPercent' => config('services.stripe.yearly_discount_percent', 20),
         ]);
+    }
+
+    /**
+     * Convert a Plan model to an array with all fields needed by the upgrade page (including feature-based attributes).
+     */
+    private function planForFrontend(Plan $plan): array
+    {
+        return [
+            'id' => $plan->id,
+            'name' => $plan->name,
+            'slug' => $plan->slug,
+            'price' => $plan->price,
+            'yearly_price' => $plan->yearly_price,
+            'monthly_credits' => $plan->monthly_credits,
+            'credit_rollover' => $plan->credit_rollover,
+            'max_projects' => $plan->max_projects,
+            'max_video_minutes' => $plan->max_video_minutes,
+            'max_dubbing_languages' => $plan->max_dubbing_languages,
+            'max_reels_per_episode' => $plan->max_reels_per_episode,
+            'allow_4k' => (bool) $plan->allow_4k,
+            'allow_intro_song_generation' => (bool) $plan->allow_intro_song_generation,
+            'allow_background_music' => (bool) $plan->allow_background_music,
+        ];
     }
 
     /**

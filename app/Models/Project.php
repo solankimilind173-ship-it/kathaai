@@ -24,6 +24,8 @@ class Project extends Model
         'image_generation_completed',
         'video_minutes',
         'quality',
+        'video_frame',
+        'video_type',
         'reels_per_episode',
         'intro_song',
         'background_music',

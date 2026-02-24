@@ -20,8 +20,8 @@ export default function TwoFactorDisable() {
             <Head title="Disable 2FA" />
 
             <div className="py-12">
-                <div className="mx-auto max-w-xl sm:px-6 lg:px-8">
-                    <Card className="p-6">
+                <div className="w-full">
+                    <Card className="mx-auto max-w-xl p-6">
                         <p className="text-stone-600">
                             Disabling 2FA will make your account less secure. You will only need your password to sign in.
                         </p>

@@ -293,4 +293,50 @@ FORMAT:
         }
         return json_decode($content, true) ?? [];
     }
+
+    /**
+     * Generate video title, short description, and exactly 10 hashtags for social sharing.
+     *
+     * @return array{title: string, description: string, hashtags: array<string>}
+     */
+    public function generateVideoMetadata(string $projectTitle, string $storySummary): array
+    {
+        $response = $this->client->chat()->create([
+            'model' => 'gpt-4o-mini',
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => '
+You are a social media copywriter. Given a story title and summary, generate:
+1. A catchy video title (under 100 characters) suitable for YouTube or Instagram.
+2. A short description (2-4 sentences, under 500 characters) that hooks viewers.
+3. Exactly 10 hashtags relevant to the story, without # in the response (we will add it).
+
+Return ONLY valid JSON in this exact format, no markdown:
+{"title": "Your title here", "description": "Your description here", "hashtags": ["tag1", "tag2", ... 10 items]}
+',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => "Title: {$projectTitle}\n\nSummary:\n" . ($storySummary ?: 'No summary.'),
+                ],
+            ],
+            'temperature' => 0.7,
+        ]);
+
+        $content = $this->getFirstChoiceContent($response);
+        if ($content === null) {
+            throw new \RuntimeException('OpenAI returned no response for video metadata.');
+        }
+        $data = json_decode($content, true) ?? [];
+        $hashtags = $data['hashtags'] ?? [];
+        if (! is_array($hashtags)) {
+            $hashtags = [];
+        }
+        return [
+            'title' => $data['title'] ?? $projectTitle,
+            'description' => $data['description'] ?? '',
+            'hashtags' => array_slice(array_values($hashtags), 0, 10),
+        ];
+    }
 }

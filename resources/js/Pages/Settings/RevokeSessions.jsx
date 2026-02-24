@@ -20,8 +20,8 @@ export default function RevokeSessions() {
             <Head title="Revoke sessions" />
 
             <div className="py-12">
-                <div className="mx-auto max-w-xl sm:px-6 lg:px-8">
-                    <Card className="p-6">
+                <div className="w-full">
+                    <Card className="mx-auto max-w-xl p-6">
                         <p className="text-stone-600">
                             This will sign you out on all other devices. You will stay signed in on this device.
                         </p>

@@ -37,7 +37,7 @@ export default function BillingIndex({
             <Head title="Billing &amp; usage" />
 
             <div className="py-8">
-                <div className="mx-auto max-w-4xl space-y-8 sm:px-6 lg:px-8">
+                <div className="w-full space-y-8">
                     {/* Current plan & credits */}
                     <Card className="border-amber-200/20 p-6">
                         <h3 className="font-display text-lg font-semibold text-stone-900">Current plan &amp; credits</h3>

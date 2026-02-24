@@ -207,6 +207,7 @@ class ProjectController extends Controller
     {
         $user = auth()->user();
         $plan = $user->plan;
+        $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
 
         $planPayload = $plan
             ? [
@@ -214,21 +215,38 @@ class ProjectController extends Controller
                 'max_video_minutes' => $plan->max_video_minutes ?? 5,
                 'max_reels_per_episode' => $plan->max_reels_per_episode ?? 1,
                 'allow_4k' => $plan->allow_4k ?? false,
+                'max_episodes_per_day' => $episodeLimitService->maxEpisodesPerDay($user),
             ]
             : [
                 'max_dubbing_languages' => 1,
                 'max_video_minutes' => 5,
                 'max_reels_per_episode' => 1,
                 'allow_4k' => false,
+                'max_episodes_per_day' => 1,
             ];
 
         $sceneGenerationCredits = $creditService->sceneGenerationCost();
         $hasEnoughForSceneGeneration = $creditService->hasEnoughForSceneGeneration($user);
 
+        $videoFrames = config('video_types.frames', []);
+        $videoTypes = collect(config('video_types.types', []))->map(fn ($t) => [
+            'id' => $t['id'],
+            'name' => $t['name'],
+            'description' => $t['description'] ?? '',
+            'sample_image_url' => $t['sample_image_url'] ?? '',
+        ])->values()->all();
+
         return Inertia::render('Projects/Create', [
             'languages' => Language::active()->get(),
             'books' => Book::orderBy('title')->get(['id', 'title', 'description']),
             'plan' => $planPayload,
+            'videoFrames' => $videoFrames,
+            'videoTypes' => $videoTypes,
+            'episodeLimit' => [
+                'max_per_day' => $planPayload['max_episodes_per_day'],
+                'used_today' => $episodeLimitService->episodesGeneratedToday($user),
+                'remaining_today' => $episodeLimitService->remainingSlotsToday($user),
+            ],
             'sceneGenerationCredits' => $sceneGenerationCredits,
             'userCredits' => (int) $user->credits,
             'hasEnoughForSceneGeneration' => $hasEnoughForSceneGeneration,
@@ -250,6 +268,8 @@ class ProjectController extends Controller
             'dub_languages.*' => 'exists:languages,id',
             'video_minutes' => 'nullable|integer|min:1|max:120',
             'quality' => 'nullable|in:1080p,4k',
+            'video_frame' => 'nullable|string|max:16',
+            'video_type' => 'nullable|string|max:64',
             'reels_per_episode' => 'nullable|integer|min:0',
             'intro_song' => 'nullable|boolean',
             'background_music' => 'nullable|boolean',
@@ -292,6 +312,13 @@ class ProjectController extends Controller
             ])->withInput();
         }
 
+        $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
+        if (! $episodeLimitService->canGenerateEpisodesToday($user)) {
+            return back()->withErrors([
+                'episodes' => $episodeLimitService->limitReachedMessage($user),
+            ])->withInput();
+        }
+
         $project = Project::create([
             'user_id' => $user->id,
             'book_id' => $sourceType === SourceType::Library ? $request->book_id : null,
@@ -305,6 +332,8 @@ class ProjectController extends Controller
             'language' => 'hindi',
             'video_minutes' => $request->video_minutes ?? 5,
             'quality' => $request->quality ?? '1080p',
+            'video_frame' => $request->filled('video_frame') ? $request->video_frame : null,
+            'video_type' => $request->filled('video_type') ? $request->video_type : null,
             'reels_per_episode' => (int) ($request->reels ?? 0),
             'intro_song' => (bool) ($request->intro_song ?? false),
             'background_music' => (bool) ($request->background_music ?? false),
@@ -352,7 +381,7 @@ class ProjectController extends Controller
                 'background_music' => $project->background_music,
             ]);
 
-            $clone->dubLanguages()->sync($project->dubLanguages()->pluck('id')->all());
+            $clone->dubLanguages()->sync($project->dubLanguages()->get()->pluck('id')->all());
 
             $charMap = [];
             foreach ($project->characters as $char) {
@@ -458,6 +487,13 @@ class ProjectController extends Controller
         }
         if ($project->is_archived) {
             return redirect()->route('projects.show', $project)->withErrors(['project' => 'Cannot retry an archived project.']);
+        }
+
+        $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
+        if (! $episodeLimitService->canGenerateEpisodesToday($project->user)) {
+            return redirect()->route('projects.show', $project)->withErrors([
+                'episodes' => $episodeLimitService->limitReachedMessage($project->user),
+            ]);
         }
 
         $project->update(['status' => ProjectStatus::Generating]);

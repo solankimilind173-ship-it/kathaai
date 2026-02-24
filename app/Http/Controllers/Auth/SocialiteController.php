@@ -70,7 +70,6 @@ class SocialiteController extends Controller
         }
 
         $defaultPlan = Plan::where('is_active', true)->orderBy('price')->first();
-        $initialCredits = $defaultPlan ? (int) ($defaultPlan->monthly_credits ?? 0) : 0;
 
         return User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? explode('@', $socialUser->getEmail() ?? 'user')[0] ?? 'User',
@@ -79,7 +78,7 @@ class SocialiteController extends Controller
             $idColumn => $socialUser->getId(),
             'email_verified_at' => now(),
             'plan_id' => $defaultPlan?->id,
-            'credits' => max(0, $initialCredits),
+            'credits' => 0,
         ]);
     }
 }
