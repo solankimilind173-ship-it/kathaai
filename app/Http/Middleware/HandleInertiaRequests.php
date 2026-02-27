@@ -41,6 +41,18 @@ class HandleInertiaRequests extends Middleware
                 'otp_sent' => $request->session()->get('otp_sent'),
                 'pending_email' => $request->session()->get('pending_email'),
             ],
+            'onboarding' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user) {
+                    return null;
+                }
+
+                return [
+                    'status' => $user->onboarding_status ?? 'not_started',
+                    'last_step' => $user->last_onboarding_step,
+                ];
+            },
         ];
     }
 }

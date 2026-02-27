@@ -7,6 +7,8 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import PageHeading from '@/Components/PageHeading';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import useOnboarding from '@/Hooks/useOnboarding';
+import OnboardingTour from '@/Components/OnboardingTour';
 
 export default function Timeline({
     project,
@@ -21,6 +23,7 @@ export default function Timeline({
     );
     const [draggedId, setDraggedId] = useState(null);
     const [dragOverId, setDragOverId] = useState(null);
+    const { onboarding, advance, completeTour, skipTour } = useOnboarding();
 
     const form = useForm({
         scene_order: sceneOrder,
@@ -97,6 +100,23 @@ export default function Timeline({
             subtitle_style: form.data.subtitle_style || 'default',
         }, { preserveScroll: true });
     }
+
+    const showOnboardingTour = onboarding.status === 'in_progress' && orderedScenes.length > 0;
+
+    const tourSteps = [
+        {
+            id: 'timeline-scenes',
+            title: 'Arrange your story timeline',
+            body: 'Drag scenes to reorder them and adjust trim duration to control the pacing of your video.',
+            target: '[data-tour-id="timeline-scenes-list"]',
+        },
+        {
+            id: 'timeline-save',
+            title: 'Save timeline settings',
+            body: 'Click “Save timeline settings” so these timings are used when your video is rendered.',
+            target: '[data-tour-id="timeline-save-button"]',
+        },
+    ];
 
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Timeline</h2>}>
@@ -177,7 +197,7 @@ export default function Timeline({
                                     <Card.Title>Scenes</Card.Title>
                                     <p className="mt-1 text-sm text-gray-500">Drag to reorder. Set trim duration (seconds) and transition per scene.</p>
                                 </Card.Header>
-                                <ul className="space-y-3">
+                                <ul className="space-y-3" data-tour-id="timeline-scenes-list">
                                     {orderedScenes.map((scene) => {
                                         const isDragging = draggedId === scene.id;
                                         const isDragOver = dragOverId === scene.id;
@@ -248,7 +268,11 @@ export default function Timeline({
                                     })}
                                 </ul>
                                 <Card.Footer>
-                                    <PrimaryButton type="submit" disabled={form.processing}>
+                                    <PrimaryButton
+                                        type="submit"
+                                        disabled={form.processing}
+                                        data-tour-id="timeline-save-button"
+                                    >
                                         Save timeline settings
                                     </PrimaryButton>
                                 </Card.Footer>
@@ -257,6 +281,16 @@ export default function Timeline({
                     )}
                 </div>
             </div>
+
+            {showOnboardingTour && (
+                <OnboardingTour
+                    open={showOnboardingTour}
+                    steps={tourSteps}
+                    onClose={skipTour}
+                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onAdvance={(stepId) => advance(stepId)}
+                />
+            )}
         </AuthenticatedLayout>
     );
 }

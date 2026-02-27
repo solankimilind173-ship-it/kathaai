@@ -36,6 +36,8 @@ class User extends Authenticatable
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
         'preferences',
+        'onboarding_status',
+        'last_onboarding_step',
     ];
 
     /** Default notification preferences (when not set). */
@@ -123,6 +125,8 @@ class User extends Authenticatable
             'suspended_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'preferences' => 'array',
+            'onboarding_status' => 'string',
+            'last_onboarding_step' => 'string',
         ];
     }
 }

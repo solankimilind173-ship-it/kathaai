@@ -10,6 +10,8 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import Modal from '@/Components/Modal';
+import useOnboarding from '@/Hooks/useOnboarding';
+import OnboardingTour from '@/Components/OnboardingTour';
 
 const statusVariantMap = {
     draft: 'draft',
@@ -341,6 +343,28 @@ export default function Show({
     const canRetryStructure = !viewOnly && !isArchived && projectStatus === 'failed';
     const canRetryRender = !viewOnly && !isArchived && hasFailedRender && projectStatus !== 'rendering';
 
+    const { onboarding, startTour, advance, completeTour, skipTour } = useOnboarding();
+
+    const shouldShowProjectTour = !viewOnly && onboarding.status === 'in_progress';
+
+    const projectTourSteps = [];
+    if (shouldShowProjectTour) {
+        projectTourSteps.push(
+            {
+                id: 'project-episodes-section',
+                title: 'Review your episodes and scenes',
+                body: 'Expand episodes to review and edit scenes before rendering your video.',
+                target: '[data-tour-id="project-episodes-section"]',
+            },
+            {
+                id: 'project-render-button',
+                title: 'Render your first video',
+                body: 'When you are ready, click Render to configure settings and generate your video.',
+                target: '[data-tour-id="project-render-button"]',
+            }
+        );
+    }
+
     const lastAutoRenderAt = project.last_auto_render_at ? new Date(project.last_auto_render_at) : null;
     const nextAutoRenderAt = lastAutoRenderAt ? addDays(lastAutoRenderAt, 1) : null;
 
@@ -469,7 +493,11 @@ export default function Show({
                                         </PrimaryButton>
                                     )}
                                     {canShowRenderButton && (
-                                        <PrimaryButton type="button" onClick={() => setShowRenderModal(true)}>
+                                        <PrimaryButton
+                                            type="button"
+                                            onClick={() => setShowRenderModal(true)}
+                                            data-tour-id="project-render-button"
+                                        >
                                             Render
                                         </PrimaryButton>
                                     )}
@@ -703,7 +731,7 @@ export default function Show({
                     </Card>
 
                     {/* 3. Episodes */}
-                    <Card className="overflow-hidden p-0">
+                    <Card className="overflow-hidden p-0" data-tour-id="project-episodes-section">
                         <div className="border-b border-gray-200 px-6 pb-4 pt-6">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
@@ -808,7 +836,7 @@ export default function Show({
 
                     {/* 5. Video outputs (render runs with format, thumbnail, title, description, hashtags) */}
                     {!viewOnly && (project.render_run_logs?.length > 0) && (
-                    <Card>
+                    <Card data-tour-id="project-video-outputs">
                         <Card.Header>
                             <Card.Title>Video outputs</Card.Title>
                             <p className="mt-1 text-sm text-gray-500">
@@ -1068,6 +1096,16 @@ export default function Show({
                     </Modal>
                 </div>
             </div>
+
+            {shouldShowProjectTour && projectTourSteps.length > 0 && (
+                <OnboardingTour
+                    open={shouldShowProjectTour}
+                    steps={projectTourSteps}
+                    onClose={skipTour}
+                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onAdvance={(stepId) => advance(stepId)}
+                />
+            )}
         </Layout>
     );
 }

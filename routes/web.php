@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShareController;
@@ -65,6 +66,12 @@ Route::middleware(['auth', 'suspended', 'user'])->group(function () {
     Route::get('/settings/sessions/revoke', [SettingsController::class, 'showRevokeSessions'])->name('settings.sessions.revoke')->middleware('password.confirm');
     Route::post('/settings/sessions/revoke', [SettingsController::class, 'revokeSessions'])->name('settings.sessions.revoke.post')->middleware('password.confirm');
     Route::get('/settings/export', [SettingsController::class, 'exportData'])->name('settings.export')->middleware(['password.confirm', 'throttle:3,1']);
+
+    // Onboarding tour state
+    Route::post('/onboarding/start', [OnboardingController::class, 'start'])->name('onboarding.start');
+    Route::post('/onboarding/step', [OnboardingController::class, 'step'])->name('onboarding.step');
+    Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
 });
 
 // -----------------------------------------------------------------------------

@@ -6,6 +6,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import CreditsPieChart from '@/Components/CreditsPieChart';
 import SubscriptionModal from '@/Components/SubscriptionModal';
 import { Head, Link } from '@inertiajs/react';
+import useOnboarding from '@/Hooks/useOnboarding';
+import OnboardingTour from '@/Components/OnboardingTour';
 
 const TIPS_DISMISSED_KEY = 'kathaai_dashboard_tips_dismissed';
 
@@ -30,6 +32,7 @@ export default function Dashboard({
 }) {
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
     const [tipsDismissed, setTipsDismissed] = useState(true);
+    const { onboarding, startTour, advance, completeTour, skipTour } = useOnboarding();
 
     useEffect(() => {
         try {
@@ -40,12 +43,28 @@ export default function Dashboard({
     }, []);
 
     const showTips = !tipsDismissed && latestProjects.length < 3;
+    const showOnboardingTour = onboarding.status !== 'completed' && latestProjects.length === 0;
     const dismissTips = () => {
         try {
             localStorage.setItem(TIPS_DISMISSED_KEY, '1');
             setTipsDismissed(true);
         } catch (_) {}
     };
+
+    const onboardingSteps = [
+        {
+            id: 'dashboard-create-project',
+            title: 'Create your first project',
+            body: 'Start by creating a story project. We will guide you from episodes and scenes all the way to your first rendered video.',
+            target: '[data-tour-id="dashboard-create-project"]',
+        },
+    ];
+
+    useEffect(() => {
+        if (showOnboardingTour && onboarding.status === 'not_started') {
+            startTour();
+        }
+    }, [showOnboardingTour, onboarding.status, startTour]);
 
     return (
         <AuthenticatedLayout
@@ -79,7 +98,7 @@ export default function Dashboard({
                             <li>Need help? Visit the <Link href={route('help.index')} className="font-medium text-amber-600 hover:text-amber-700">Help</Link> page for FAQs.</li>
                         </ul>
                         <div className="mt-4 flex gap-3">
-                            <Link href={route('projects.create')}>
+                            <Link href={route('projects.create')} data-tour-id="dashboard-create-project">
                                 <PrimaryButton>Create a project</PrimaryButton>
                             </Link>
                             <button
@@ -189,7 +208,7 @@ export default function Dashboard({
                     {latestProjects.length === 0 ? (
                         <Card className="border-amber-200/20 py-10 text-center">
                             <p className="text-stone-600">No projects yet.</p>
-                            <Link href={route('projects.create')} className="mt-4 inline-block">
+                            <Link href={route('projects.create')} className="mt-4 inline-block" data-tour-id="dashboard-create-project">
                                 <PrimaryButton>Create your first project</PrimaryButton>
                             </Link>
                         </Card>
@@ -222,6 +241,16 @@ export default function Dashboard({
                     )}
                 </section>
             </div>
+
+            {showOnboardingTour && (
+                <OnboardingTour
+                    open={showOnboardingTour}
+                    steps={onboardingSteps}
+                    onClose={skipTour}
+                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onAdvance={(stepId) => advance(stepId)}
+                />
+            )}
 
             <SubscriptionModal
                 show={showSubscriptionModal}

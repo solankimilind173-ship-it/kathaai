@@ -11,6 +11,8 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import useOnboarding from '@/Hooks/useOnboarding';
+import OnboardingTour from '@/Components/OnboardingTour';
 
 const statusVariantMap = {
     draft: 'draft',
@@ -38,6 +40,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
     const statusLabelMap = useMemo(() => Object.fromEntries(statusOptions.map((o) => [o.value, o.label])), [statusOptions]);
 
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const { onboarding, startTour, advance, completeTour, skipTour } = useOnboarding();
 
     const { data, setData, get } = useForm({
         archived: filters.archived ?? false,
@@ -100,6 +103,22 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
     const showArchived = !!filters.archived;
     const hasFilters = data.search || data.status || data.date_from || data.date_to || !!filters.archived;
 
+    const hasAnyProjects = (projects.total ?? items.length) > 0;
+    const showOnboardingTour = onboarding.status !== 'completed' && !hasAnyProjects;
+
+    const onboardingSteps = [
+        {
+            id: 'projects-index-new-project',
+            title: 'Create a new project',
+            body: 'Click “New Project” to start a guided flow that generates episodes, scenes, and a video for you.',
+            target: '[data-tour-id="projects-new-project-button"]',
+        },
+    ];
+
+    if (showOnboardingTour && onboarding.status === 'not_started') {
+        startTour();
+    }
+
     return (
         <AuthenticatedLayout
             header={
@@ -120,7 +139,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                         title="My Projects"
                         description="List, filter, and manage your story projects."
                         action={
-                            <Link href={route('projects.create')}>
+                            <Link href={route('projects.create')} data-tour-id="projects-new-project-button">
                                 <PrimaryButton>New Project</PrimaryButton>
                             </Link>
                         }
@@ -222,7 +241,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                             description={hasFilters ? 'Try changing your filters or create a new project.' : 'Create your first story project to get started.'}
                             action={
                                 !hasFilters && (
-                                    <Link href={route('projects.create')}>
+                                <Link href={route('projects.create')} data-tour-id="projects-new-project-button">
                                         <PrimaryButton>Create Project</PrimaryButton>
                                     </Link>
                                 )
@@ -377,6 +396,16 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                     )}
                 </div>
             </div>
+
+            {showOnboardingTour && (
+                <OnboardingTour
+                    open={showOnboardingTour}
+                    steps={onboardingSteps}
+                    onClose={skipTour}
+                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onAdvance={(stepId) => advance(stepId)}
+                />
+            )}
         </AuthenticatedLayout>
     );
 }

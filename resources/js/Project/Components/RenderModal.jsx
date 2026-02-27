@@ -4,6 +4,8 @@ import Modal from '@/Components/Modal';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
+import useOnboarding from '@/Hooks/useOnboarding';
+import OnboardingTour from '@/Components/OnboardingTour';
 
 /**
  * Render modal: resolution, format, fps, subtitles, background music; fetches cost estimate and submits render.
@@ -27,6 +29,8 @@ export default function RenderModal({
     const [estimate, setEstimate] = useState({ cost: 0, duration_minutes: 0, user_credits: userCredits });
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    const { onboarding, advance, completeTour, skipTour } = useOnboarding();
 
     const allow4k = plan?.allow_4k ?? false;
 
@@ -60,6 +64,23 @@ export default function RenderModal({
 
     const canSubmit = estimate.user_credits >= estimate.cost && estimate.cost >= 0;
 
+    const showOnboardingTour = open && onboarding.status === 'in_progress';
+
+    const tourSteps = [
+        {
+            id: 'render-modal-settings',
+            title: 'Choose render settings',
+            body: 'Pick the resolution and format for your video. You can always render again with different settings later.',
+            target: '[data-tour-id="render-modal-resolution"]',
+        },
+        {
+            id: 'render-modal-start',
+            title: 'Start your first render',
+            body: 'When you’re happy with the settings, start the render. We will notify you when it is ready.',
+            target: '[data-tour-id="render-modal-start-button"]',
+        },
+    ];
+
     return (
         <Modal show={open} onClose={onClose}>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -69,6 +90,7 @@ export default function RenderModal({
                     <div>
                         <InputLabel value="Resolution" />
                         <select
+                            data-tour-id="render-modal-resolution"
                             value={settings.resolution}
                             onChange={(e) => setSettings((s) => ({ ...s, resolution: e.target.value }))}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
@@ -146,11 +168,25 @@ export default function RenderModal({
                     <SecondaryButton type="button" onClick={onClose}>
                         Cancel
                     </SecondaryButton>
-                    <PrimaryButton type="submit" disabled={!canSubmit || submitting}>
+                    <PrimaryButton
+                        type="submit"
+                        disabled={!canSubmit || submitting}
+                        data-tour-id="render-modal-start-button"
+                    >
                         {submitting ? 'Starting…' : 'Start render'}
                     </PrimaryButton>
                 </div>
             </form>
+
+            {showOnboardingTour && (
+                <OnboardingTour
+                    open={showOnboardingTour}
+                    steps={tourSteps}
+                    onClose={skipTour}
+                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onAdvance={(stepId) => advance(stepId)}
+                />
+            )}
         </Modal>
     );
 }
