@@ -38,8 +38,9 @@ class VideoWatermarkService
             $filterComplex = "[0:v][1:v]overlay={$position}";
         }
 
+        $ffmpeg = FfmpegPathResolver::resolve();
         $result = Process::run([
-            'ffmpeg', '-y',
+            $ffmpeg, '-y',
             '-i', $inputPath,
             '-i', $logoPath,
             '-filter_complex', $filterComplex,

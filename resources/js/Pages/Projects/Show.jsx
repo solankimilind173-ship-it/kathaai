@@ -36,6 +36,12 @@ function formatDateShort(value) {
     return new Date(value).toLocaleDateString(undefined, { dateStyle: 'medium' });
 }
 
+function addDays(date, days) {
+    const d = new Date(date.getTime());
+    d.setDate(d.getDate() + days);
+    return d;
+}
+
 const CAMERA_STYLES = [
     { value: '', label: 'Default' },
     { value: 'close_up', label: 'Close up' },
@@ -85,7 +91,7 @@ function SceneCard({
         <div className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             <div className="relative aspect-video w-full shrink-0 bg-gradient-to-br from-slate-100 via-indigo-50/50 to-slate-100">
                 {scene.image_url ? (
-                    <img src={scene.image_url} alt={scene.title || `Scene ${scene.scene_number}`} className="h-full w-full object-cover" />
+                    <img src={scene.image_url.startsWith('http') ? scene.image_url : `/storage/${scene.image_url}`} alt={scene.title || `Scene ${scene.scene_number}`} className="h-full w-full object-cover" />
                 ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-4 text-center">
                         <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700">Scene {scene.scene_number}</span>
@@ -330,9 +336,13 @@ export default function Show({
     const dubLanguageNames = dubLangs.length ? dubLangs.map((l) => l.name).join(', ') : 'None';
     const projectStatus = project.status?.value ?? project.status;
     const isArchived = !!project.is_archived;
-    const canShowRenderButton = !isArchived && projectStatus !== 'rendering' && (projectStatus === 'ready' || projectStatus === 'completed');
+    const hasEpisodes = (project.episodes?.length ?? 0) > 0;
+    const canShowRenderButton = !isArchived && projectStatus !== 'rendering' && (projectStatus === 'ready' || projectStatus === 'completed' || hasEpisodes);
     const canRetryStructure = !viewOnly && !isArchived && projectStatus === 'failed';
     const canRetryRender = !viewOnly && !isArchived && hasFailedRender && projectStatus !== 'rendering';
+
+    const lastAutoRenderAt = project.last_auto_render_at ? new Date(project.last_auto_render_at) : null;
+    const nextAutoRenderAt = lastAutoRenderAt ? addDays(lastAutoRenderAt, 1) : null;
 
     const episodes = useMemo(
         () => [...(project.episodes ?? [])].sort((a, b) => (a.episode_number ?? 0) - (b.episode_number ?? 0)),
@@ -530,11 +540,23 @@ export default function Show({
                                     </Badge>
                                 </dd>
                             </div>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Last auto render</dt>
+                                <dd className="mt-1 text-sm text-gray-900">
+                                    {lastAutoRenderAt ? formatDate(lastAutoRenderAt) : '—'}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Next auto render (approx)</dt>
+                                <dd className="mt-1 text-sm text-gray-900">
+                                    {nextAutoRenderAt ? formatDateShort(nextAutoRenderAt) : '—'}
+                                </dd>
+                            </div>
                         </dl>
                     </Card>
 
-                    {/* Visibility toggle + share link (owner only) */}
-                    {!viewOnly && (
+                    {/* Visibility toggle + share link (owner only) — show only for projects created from uploaded PDF/file */}
+                    {!viewOnly && project.book?.user_id != null && (
                         <Card>
                             <Card.Header>
                                 <Card.Title>Visibility</Card.Title>
@@ -651,9 +673,9 @@ export default function Show({
                                         key={char.id}
                                         className="flex items-start gap-4 rounded-lg border border-gray-200 bg-gray-50/50 p-4"
                                     >
-                                        {char.image_path ? (
+                                        {(char.image_url || char.image_path) ? (
                                             <img
-                                                src={char.image_path}
+                                                src={char.image_url || (char.image_path ? `/storage/${char.image_path}` : '')}
                                                 alt={char.name}
                                                 className="h-16 w-16 shrink-0 rounded-lg object-cover"
                                             />

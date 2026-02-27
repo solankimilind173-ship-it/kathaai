@@ -204,7 +204,7 @@ export default function Timeline({
                                                 </span>
                                                 <div className="h-14 w-24 shrink-0 overflow-hidden rounded bg-gray-100">
                                                     {scene.image_url ? (
-                                                        <img src={scene.image_url} alt="" className="h-full w-full object-cover" />
+                                                        <img src={scene.image_url.startsWith('http') ? scene.image_url : `/storage/${scene.image_url}`} alt="" className="h-full w-full object-cover" />
                                                     ) : (
                                                         <div className="flex h-full items-center justify-center text-xs text-gray-400">Scene {scene.scene_number}</div>
                                                     )}

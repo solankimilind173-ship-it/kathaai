@@ -7,6 +7,7 @@ use App\Models\StoryChunk;
 use App\Services\StoryChunker;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -48,19 +49,38 @@ class GenerateProjectStructureJob implements ShouldQueue
 
             $chunks = $chunker->chunk($story);
 
-            foreach ($chunks as $index => $chunk) {
-                StoryChunk::create([
-                    'project_id' => $project->id,
-                    'chunk_text' => $chunk,
-                    'chunk_order' => $index,
-                    'token_count' => (int) (strlen($chunk) / 4),
+            $project = Project::find($this->projectId);
+            if (! $project) {
+                Log::warning('GenerateProjectStructureJob: project was removed before creating chunks', [
+                    'project_id' => $this->projectId,
                 ]);
+                return;
+            }
+
+            try {
+                foreach ($chunks as $index => $chunk) {
+                    StoryChunk::create([
+                        'project_id' => $project->id,
+                        'chunk_text' => $chunk,
+                        'chunk_order' => $index,
+                        'token_count' => (int) (strlen($chunk) / 4),
+                    ]);
+                }
+            } catch (QueryException $e) {
+                if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'foreign key constraint')) {
+                    Log::warning('GenerateProjectStructureJob: project no longer exists, skipping chunk create', [
+                        'project_id' => $this->projectId,
+                    ]);
+                    return;
+                }
+                throw $e;
             }
 
             GenerateEpisodesJob::dispatch($project);
             ExtractCharactersJob::dispatch($project)->delay(now()->addSeconds(25));
             GenerateCharacterPromptsJob::dispatch($project)->delay(now()->addSeconds(60));
             GenerateCharacterImagesJob::dispatch($project)->delay(now()->addSeconds(110));
+            GenerateProjectSceneMediaJob::dispatch($project)->delay(now()->addSeconds(90));
 
             $project->load('user');
             if ($project->user) {
@@ -73,11 +93,13 @@ class GenerateProjectStructureJob implements ShouldQueue
             }
         } catch (Throwable $e) {
             Log::error('GenerateProjectStructureJob failed', [
-                'project_id' => $project->id,
+                'project_id' => $this->projectId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            $project->update(['status' => \App\Enums\ProjectStatus::Failed]);
+            if (Project::where('id', $this->projectId)->exists()) {
+                Project::where('id', $this->projectId)->update(['status' => \App\Enums\ProjectStatus::Failed]);
+            }
             // Do not rethrow: job is considered handled so user can retry manually
         }
     }

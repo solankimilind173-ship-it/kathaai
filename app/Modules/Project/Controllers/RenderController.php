@@ -2,21 +2,23 @@
 
 namespace App\Modules\Project\Controllers;
 
-use App\Enums\ProjectStatus;
 use App\Enums\VideoFormat;
 use App\Jobs\RenderProjectJob;
 use App\Models\Project;
 use App\Models\ProjectEngagement;
-use App\Models\RenderLog;
 use App\Services\CreditCalculator;
-use App\Services\CreditService;
-use App\Services\VideoMetadataService;
+use App\Services\StartRenderService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class RenderController extends Controller
 {
-    public function estimateCost(Request $request, Project $project, CreditCalculator $creditCalculator)
+    public function __construct(
+        protected CreditCalculator $creditCalculator,
+        protected StartRenderService $startRenderService
+    ) {}
+
+    public function estimateCost(Request $request, Project $project)
     {
         if ($project->is_archived) {
             abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
@@ -30,8 +32,8 @@ class RenderController extends Controller
             'subtitle_style' => 'nullable|string|max:64',
         ]);
         $format = $this->resolveFormat($request);
-        $durationMinutes = $this->getProjectDurationMinutes($project);
-        $cost = $creditCalculator->calculateRenderCost([
+        $durationMinutes = $this->startRenderService->getProjectDurationMinutes($project);
+        $cost = $this->creditCalculator->calculateRenderCost([
             'resolution' => $request->input('resolution', '1080p'),
             'format' => $format,
             'fps' => $request->input('fps', 24),
@@ -45,7 +47,7 @@ class RenderController extends Controller
         ]);
     }
 
-    public function start(Request $request, Project $project, CreditCalculator $creditCalculator, CreditService $creditService, VideoMetadataService $metadataService)
+    public function start(Request $request, Project $project)
     {
         if ($project->is_archived) {
             abort(403, 'AI actions are not allowed on archived projects. Restore the project first.');
@@ -65,49 +67,29 @@ class RenderController extends Controller
             return back()->withErrors(['resolution' => '4K is not available on your plan.']);
         }
         $videoFormat = VideoFormat::from($request->input('video_format'));
-        $format = $videoFormat->aspectRatio();
-        $durationMinutes = $this->getProjectDurationMinutes($project);
-        $amount = $creditCalculator->calculateRenderCost([
+        $options = [
             'resolution' => $resolution,
-            'format' => $format,
-            'fps' => $request->input('fps'),
-            'duration_minutes' => $durationMinutes,
-            'background_music' => (bool) $request->input('background_music', false),
-        ]);
-        if (! $creditService->hasEnoughCredits($user, $amount)) {
-            return back()->withErrors([
-                'credits' => "Insufficient credits. Required: {$amount}, available: {$user->credits}.",
-            ]);
-        }
-        $metadata = $metadataService->generateForProject($project);
-        $creditService->deductForRender($user, $project, $amount);
-        ProjectEngagement::incrementFor($project, 'render_count');
-        $renderLog = RenderLog::create([
-            'project_id' => $project->id,
-            'status' => 'pending',
-            'video_format' => $videoFormat->value,
-            'video_title' => $metadata['title'],
-            'video_description' => $metadata['description'],
-            'hashtags' => $metadata['hashtags'],
-        ]);
-        $project->update(['status' => ProjectStatus::Rendering]);
-        RenderProjectJob::dispatch($project, $renderLog, [
-            'resolution' => $resolution,
-            'format' => $format,
+            'format' => $videoFormat->aspectRatio(),
             'video_format' => $videoFormat->value,
             'fps' => (int) $request->input('fps'),
             'subtitle_style' => $request->input('subtitle_style', 'default'),
             'background_music' => (bool) $request->input('background_music', false),
-        ]);
-        return redirect()->route('projects.show', $project)->with('success', 'Render started. Title, description and 10 hashtags have been generated for this video.');
-    }
-
-    private function resolveFormat(Request $request): string
-    {
-        if ($request->filled('video_format')) {
-            return VideoFormat::from($request->input('video_format'))->aspectRatio();
+        ];
+        $renderLog = $this->startRenderService->startRender($project, $options, $user);
+        if (! $renderLog) {
+            $durationMinutes = $this->startRenderService->getProjectDurationMinutes($project);
+            $amount = $this->creditCalculator->calculateRenderCost([
+                'resolution' => $resolution,
+                'format' => $options['format'],
+                'fps' => $options['fps'],
+                'duration_minutes' => $durationMinutes,
+                'background_music' => $options['background_music'],
+            ]);
+            return back()->withErrors([
+                'credits' => "Insufficient credits. Required: {$amount}, available: {$user->credits}.",
+            ]);
         }
-        return $request->input('format', '16:9');
+        return redirect()->route('projects.show', $project)->with('success', 'Render started. Title, description and 10 hashtags have been generated for this video.');
     }
 
     public function retryRender(Project $project)
@@ -120,19 +102,17 @@ class RenderController extends Controller
             return redirect()->route('projects.show', $project)->withErrors(['project' => 'No failed render to retry.']);
         }
         $lastFailed->update(['status' => 'pending', 'error_message' => null, 'completed_at' => null]);
-        $project->update(['status' => ProjectStatus::Rendering]);
+        $project->update(['status' => \App\Enums\ProjectStatus::Rendering]);
         ProjectEngagement::incrementFor($project, 'render_count');
         RenderProjectJob::dispatch($project, $lastFailed, []);
         return redirect()->route('projects.show', $project)->with('success', 'Render has been queued for retry.');
     }
 
-    private function getProjectDurationMinutes(Project $project): float
+    private function resolveFormat(Request $request): string
     {
-        $projectId = $project->id;
-        $totalSeconds = $project->scenes()->get()->sum(function ($scene) use ($projectId) {
-            $settings = $scene->sceneRenderSettings()->where('project_id', $projectId)->first();
-            return $settings?->duration_trimmed ?? $scene->duration ?? 0;
-        });
-        return round($totalSeconds / 60, 2) ?: (float) ($project->video_minutes ?? 5);
+        if ($request->filled('video_format')) {
+            return VideoFormat::from($request->input('video_format'))->aspectRatio();
+        }
+        return $request->input('format', '16:9');
     }
 }

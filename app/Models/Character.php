@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Character extends Model
 {
@@ -17,6 +18,8 @@ class Character extends Model
         'image_prompt',
         'image_path',
     ];
+
+    protected $appends = ['image_url'];
 
     public function project(): BelongsTo
     {
@@ -31,6 +34,27 @@ class Character extends Model
     public function selectedImage(): BelongsTo
     {
         return $this->belongsTo(CharacterImage::class, 'selected_image_id');
+    }
+
+    /**
+     * Full URL for displaying the character image (used in project show, gallery, etc.).
+     * Prefers selected image, then legacy image_path. Returns null if no image.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $path = null;
+        if ($this->relationLoaded('selectedImage') && $this->selectedImage && ! empty($this->selectedImage->image_url)) {
+            $path = $this->selectedImage->image_url;
+        } elseif (! empty($this->image_path)) {
+            $path = $this->image_path;
+        }
+        if (empty($path)) {
+            return null;
+        }
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+        return Storage::disk('public')->url($path);
     }
 
     /**

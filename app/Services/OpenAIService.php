@@ -183,6 +183,81 @@ Return ONLY the visual description paragraph.
     }
 
     /**
+     * Generate a scene image from a visual description and save under public disk.
+     * Returns relative path (e.g. scenes/1/abc.png) for use in scene.image_url.
+     */
+    public function generateSceneImage(string $prompt, string $filename, int|string $projectId): string
+    {
+        $response = Http::timeout(300)
+            ->connectTimeout(60)
+            ->retry(3, 5000)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . config('services.openai.key'),
+                'Content-Type' => 'application/json',
+            ])
+            ->post('https://api.openai.com/v1/images/generations', [
+                'model' => 'gpt-image-1',
+                'prompt' => $prompt,
+                'size' => '1024x1024',
+            ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('Scene image generation failed: ' . $response->body());
+        }
+
+        $imageBase64 = $response->json('data.0.b64_json');
+        $image = base64_decode($imageBase64);
+        if ($image === false) {
+            throw new \RuntimeException('Scene image decode failed.');
+        }
+
+        $directory = "scenes/{$projectId}";
+        $path = "{$directory}/{$filename}.png";
+        Storage::disk('public')->makeDirectory($directory);
+        Storage::disk('public')->put($path, $image);
+
+        return $path;
+    }
+
+    /**
+     * Generate speech from text via OpenAI TTS and save as MP3.
+     * Returns relative path (e.g. scenes/1/abc.mp3) for use in scene.voice_url.
+     */
+    public function generateSceneVoice(string $text, string $filename, int|string $projectId, string $voice = 'alloy'): string
+    {
+        $trimmed = trim($text);
+        if ($trimmed === '') {
+            throw new \InvalidArgumentException('Text for TTS cannot be empty.');
+        }
+        // TTS limit ~4096 chars; truncate to avoid API errors
+        $input = mb_substr($trimmed, 0, 4096);
+
+        $response = Http::timeout(120)
+            ->connectTimeout(30)
+            ->retry(2, 3000)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . config('services.openai.key'),
+                'Content-Type' => 'application/json',
+            ])
+            ->post('https://api.openai.com/v1/audio/speech', [
+                'model' => 'tts-1',
+                'input' => $input,
+                'voice' => $voice,
+            ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('Scene voice generation failed: ' . $response->body());
+        }
+
+        $directory = "scenes/{$projectId}";
+        $path = "{$directory}/{$filename}.mp3";
+        Storage::disk('public')->makeDirectory($directory);
+        Storage::disk('public')->put($path, $response->body());
+
+        return $path;
+    }
+
+    /**
      * @param  array<int, array{name: string, reference: string}>  $lockedFaceReferences  Character name => face reference URL/path for visual consistency
      */
     public function generateScenes(string $episodeSummary, array $lockedFaceReferences = []): array

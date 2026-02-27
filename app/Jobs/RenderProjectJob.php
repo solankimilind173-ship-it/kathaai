@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\RenderLog;
+use App\Services\VideoRenderService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,13 +17,15 @@ class RenderProjectJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $timeout = 1800;
+
     public function __construct(
         public Project $project,
         public RenderLog $renderLog,
         public array $options = []
     ) {}
 
-    public function handle(): void
+    public function handle(VideoRenderService $renderService): void
     {
         $renderLog = $this->renderLog->fresh();
         $project = $this->project->fresh();
@@ -37,19 +40,21 @@ class RenderProjectJob implements ShouldQueue
         ]);
 
         try {
-            // TODO: Integrate with actual render pipeline (resolution, format, fps, subtitle_style, background_music from $this->options)
             Log::info('RenderProjectJob: starting render', [
                 'project_id' => $project->id,
                 'render_log_id' => $renderLog->id,
                 'options' => $this->options,
             ]);
 
-            $outputUrl = null; // Replace with real output URL when pipeline is implemented
+            $result = $renderService->render($project, $renderLog, array_merge($this->options, [
+                'apply_watermark' => true,
+            ]));
 
             $renderLog->update([
                 'status' => 'completed',
                 'completed_at' => now(),
-                'output_url' => $outputUrl,
+                'output_url' => $result['output_url'],
+                'thumbnail_url' => $result['thumbnail_url'],
             ]);
 
             $project->update(['status' => ProjectStatus::Completed]);

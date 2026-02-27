@@ -31,7 +31,7 @@ class ShareController extends Controller
         $project->loadCount(['episodes', 'characters', 'scenes']);
         $project->load([
             'episodes' => fn ($q) => $q->with(['scenes' => fn ($q) => $q->orderBy('scene_number')])->orderBy('episode_number'),
-            'characters',
+            'characters' => fn ($q) => $q->with('selectedImage'),
         ]);
 
         return Inertia::render('Projects/Show', [

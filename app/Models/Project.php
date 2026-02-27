@@ -16,6 +16,7 @@ class Project extends Model
         'description',
         'story_source',
         'source_type',
+        'story_from_file',
         'is_public',
         'status',
         'is_archived',
@@ -29,16 +30,19 @@ class Project extends Model
         'reels_per_episode',
         'intro_song',
         'background_music',
+        'last_auto_render_at',
     ];
 
     protected $casts = [
         'status' => ProjectStatus::class,
         'source_type' => SourceType::class,
         'is_public' => 'boolean',
+        'story_from_file' => 'boolean',
         'is_archived' => 'boolean',
         'intro_song' => 'boolean',
         'background_music' => 'boolean',
         'total_credits_used' => 'integer',
+        'last_auto_render_at' => 'datetime',
     ];
 
     public function scopeNotArchived(Builder $query): Builder

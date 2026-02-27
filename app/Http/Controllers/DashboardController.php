@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Character;
 use App\Models\Plan;
 use App\Models\Project;
+use App\Models\RenderLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,7 +22,10 @@ class DashboardController extends Controller
 
         $projectsCreated = Project::where('user_id', $userId)->count();
         $projectsCompleted = Project::where('user_id', $userId)->where('status', 'completed')->count();
-        $videosGenerated = 0; // Placeholder until video generation is tracked
+        $videosGenerated = RenderLog::whereHas('project', fn ($q) => $q->where('user_id', $userId))
+            ->where('status', 'completed')
+            ->whereNotNull('output_url')
+            ->count();
 
         $creditsUsed = (int) $user->credits;
         $plan = $user->plan;

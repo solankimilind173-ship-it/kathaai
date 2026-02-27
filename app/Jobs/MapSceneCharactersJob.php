@@ -7,6 +7,7 @@ use App\Models\Character;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -16,9 +17,10 @@ class MapSceneCharactersJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public Scene $scene;
+    public int $sceneId;
 
     public $tries = 1;
+
     public $timeout = 180;
 
     /**
@@ -26,7 +28,7 @@ class MapSceneCharactersJob implements ShouldQueue
      */
     public function __construct(Scene $scene)
     {
-        $this->scene = $scene;
+        $this->sceneId = $scene->id;
     }
 
     /**
@@ -34,79 +36,84 @@ class MapSceneCharactersJob implements ShouldQueue
      */
     public function handle(OpenAIService $ai): void
     {
-        if (!$this->scene || !$this->scene->description) {
-            Log::warning('Scene missing description', [
-                'scene_id' => $this->scene?->id
+        $scene = Scene::with('episode')->find($this->sceneId);
+
+        if (! $scene || ! $scene->episode) {
+            Log::warning('MapSceneCharactersJob: scene or episode missing', [
+                'scene_id' => $this->sceneId,
             ]);
             return;
         }
 
-        $projectId = $this->scene->episode->project_id;
+        if (empty(trim($scene->description ?? ''))) {
+            Log::warning('Scene missing description', ['scene_id' => $this->sceneId]);
+            return;
+        }
 
-        // Fetch only project characters
+        $projectId = $scene->episode->project_id;
+
         $characters = Character::where('project_id', $projectId)
             ->get(['id', 'name', 'description']);
 
         if ($characters->isEmpty()) {
-            Log::warning('No characters found for scene', [
-                'scene_id' => $this->scene->id
-            ]);
+            Log::warning('No characters found for scene', ['scene_id' => $this->sceneId]);
             return;
         }
 
-        // Prepare allowed names list (case-insensitive)
         $allowedNames = $characters
             ->pluck('name')
-            ->map(fn($name) => strtolower(trim($name)))
+            ->map(fn ($name) => strtolower(trim($name)))
             ->toArray();
 
-        // AI mapping call
         $results = $ai->mapSceneCharacters(
-            $this->scene->description,
+            $scene->description,
             $characters->toArray()
         );
 
-        if (!is_array($results)) {
+        if (! is_array($results)) {
             Log::error('Invalid AI scene-character mapping response', [
-                'scene_id' => $this->scene->id,
-                'response' => $results
+                'scene_id' => $this->sceneId,
+                'response' => $results,
             ]);
             return;
         }
 
-        // Re-run safe
-        $this->scene->characters()->detach();
+        try {
+            $scene->characters()->detach();
 
-        foreach ($results as $char) {
+            foreach ($results as $char) {
+                if (! isset($char['name'])) {
+                    continue;
+                }
 
-            if (!isset($char['name'])) {
-                continue;
+                $aiName = strtolower(trim($char['name']));
+
+                if (! in_array($aiName, $allowedNames)) {
+                    continue;
+                }
+
+                $character = $characters->firstWhere(fn ($c) => strtolower($c->name) === $aiName);
+
+                if (! $character) {
+                    continue;
+                }
+
+                if (! $scene->characters()->where('character_id', $character->id)->exists()) {
+                    $scene->characters()->attach($character->id, [
+                        'action' => $char['action'] ?? null,
+                    ]);
+                }
             }
 
-            $aiName = strtolower(trim($char['name']));
-
-            // 🔥 IMPORTANT: Ignore generic groups
-            if (!in_array($aiName, $allowedNames)) {
-                continue;
-            }
-
-            $character = $characters
-                ->firstWhere(fn($c) => strtolower($c->name) === $aiName);
-
-            if (!$character) {
-                continue;
-            }
-
-            // Avoid duplicate attach
-            if (!$this->scene->characters()->where('character_id', $character->id)->exists()) {
-                $this->scene->characters()->attach($character->id, [
-                    'action' => $char['action'] ?? null
+            $scene->update(['status' => 'characters_mapped']);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'foreign key constraint')) {
+                Log::warning('MapSceneCharactersJob: scene or related record no longer exists', [
+                    'scene_id' => $this->sceneId,
                 ]);
+                return;
             }
+            throw $e;
         }
-
-        $this->scene->update([
-            'status' => 'characters_mapped'
-        ]);
     }
 }

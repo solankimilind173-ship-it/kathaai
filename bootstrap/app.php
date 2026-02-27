@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -36,4 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             return redirect()->back()->withErrors(['credits' => $e->getMessage()])->withInput();
         });
-    })->create();
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('projects:auto-render')->dailyAt('06:00');
+    })
+    ->create();

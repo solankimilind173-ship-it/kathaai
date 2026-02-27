@@ -7,53 +7,47 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## About Laravel
+## Daily auto-render pipeline
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+This project includes an automated video generation pipeline that can render **at most one video per project per day**.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### How it works
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- After scenes and scene media (images + voice) are generated, the pipeline can automatically start a render using `RenderProjectJob`.
+- A scheduled command runs every day at **06:00 server time**:
+  - Command: `php artisan projects:auto-render`
+  - Defined in `app/Console/Commands/ScheduleDailyProjectRender.php`.
+  - Scheduled in `bootstrap/app.php` via `withSchedule(...)`.
+- The command finds eligible, non-archived projects and dispatches `RunDailyRenderPipelineJob`, which in turn queues `GenerateProjectSceneMediaJob` and (if allowed) a render via `StartRenderService`.
 
-## Learning Laravel
+### Daily limits and configuration
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- Per-project daily auto-rendering is controlled by:
+  - `config('kathaai.auto_render_after_pipeline')`
+  - `config('kathaai.auto_render_max_per_project_per_day')`
+- Relevant environment variables:
+  - `KATHAAI_AUTO_RENDER_AFTER_PIPELINE=true`
+  - `KATHAAI_AUTO_RENDER_MAX_PER_PROJECT_PER_DAY=1`
+- Each project tracks its last successful auto-render start in the `projects.last_auto_render_at` column.
+  - If a project has already auto-rendered today, additional auto-renders are skipped for that day.
+  - Manual renders via the UI are not subject to this daily limit.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Requirements for auto-rendering
 
-## Laravel Sponsors
+- **Queue workers** must be running so that jobs like `GenerateProjectSceneMediaJob`, `RunDailyRenderPipelineJob`, and `RenderProjectJob` are processed.
+- **Scheduler/cron** must execute the Laravel scheduler, for example:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+* * * * * php /path/to/artisan schedule:run >> /dev/null 2>&1
+```
 
-### Premium Partners
+- **FFmpeg** must be installed and accessible on the server:
+  - Configure via `config/video.php` using:
+    - `FFMPEG_PATH` in `.env` (e.g. `/usr/local/bin/ffmpeg`)
+    - or by ensuring `ffmpeg` is available on the system `PATH`.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### UI feedback
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- On the project detail page:
+  - The **Overview** section shows the *Last auto render* and an approximate *Next auto render* date per project, based on `last_auto_render_at`.
+  - The **Video outputs** and **Render history** sections list past renders and pipeline log entries for the project.

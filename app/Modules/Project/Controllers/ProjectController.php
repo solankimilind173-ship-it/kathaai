@@ -83,8 +83,9 @@ class ProjectController extends Controller
     {
         $project->loadCount(['episodes', 'characters', 'scenes']);
         $project->load([
+            'book' => fn ($q) => $q->select('id', 'title', 'user_id', 'is_public'),
             'episodes' => fn ($q) => $q->with(['scenes' => fn ($q) => $q->orderBy('scene_number')])->orderBy('episode_number'),
-            'characters',
+            'characters' => fn ($q) => $q->with('selectedImage'),
             'dubLanguages',
             'shareToken',
             'renderLogs' => fn ($q) => $q->with('episode:id,title')->latest()->limit(100),
@@ -146,7 +147,13 @@ class ProjectController extends Controller
     public function updateVisibility(Request $request, Project $project)
     {
         $request->validate(['is_public' => 'required|boolean']);
-        $project->update(['is_public' => $request->boolean('is_public')]);
+        $isPublic = $request->boolean('is_public');
+        $project->update(['is_public' => $isPublic]);
+
+        if ($project->book_id && $project->book && $project->book->user_id !== null) {
+            $project->book->update(['is_public' => $isPublic]);
+        }
+
         if ($project->is_public) {
             ProjectEngagement::incrementFor($project, 'share_count');
             $token = $project->shareToken ?? ProjectShareToken::create([
@@ -216,7 +223,7 @@ class ProjectController extends Controller
 
         return Inertia::render('Project/Pages/Create', [
             'languages' => Language::active()->get(),
-            'books' => Book::orderBy('title')->get(['id', 'title', 'description']),
+            'books' => Book::forDropdown($user->id)->get(['id', 'title', 'description']),
             'plan' => $planPayload,
             'videoFrames' => $videoFrames,
             'videoTypes' => $videoTypes,
@@ -258,6 +265,8 @@ class ProjectController extends Controller
 
         $sourceType = $request->source_type === 'library' ? SourceType::Library : SourceType::Uploaded;
         $storyText = null;
+        $bookId = null;
+        $storyFromFile = false;
 
         if ($sourceType === SourceType::Library) {
             $book = Book::findOrFail($request->book_id);
@@ -286,6 +295,18 @@ class ProjectController extends Controller
                         : 'Please provide your story text or upload a PDF or Word (.doc, .docx) file.',
                 ])->withInput();
             }
+        }
+
+        if ($sourceType === SourceType::Uploaded && $request->file('story_file')) {
+            $book = Book::create([
+                'title' => $request->title ?: $request->file('story_file')->getClientOriginalName(),
+                'description' => null,
+                'content' => $storyText,
+                'user_id' => $user->id,
+                'is_public' => false,
+            ]);
+            $bookId = $book->id;
+            $storyFromFile = true;
         }
 
         $maxDubbing = $plan?->max_dubbing_languages ?? 1;
@@ -319,11 +340,12 @@ class ProjectController extends Controller
 
         $project = Project::create([
             'user_id' => $user->id,
-            'book_id' => $sourceType === SourceType::Library ? $request->book_id : null,
+            'book_id' => $sourceType === SourceType::Library ? $request->book_id : $bookId,
             'title' => $request->title,
             'description' => null,
             'story_source' => $sourceType === SourceType::Uploaded ? $storyText : null,
             'source_type' => $sourceType,
+            'story_from_file' => $storyFromFile,
             'is_public' => false,
             'status' => ProjectStatus::Draft,
             'total_credits_used' => 0,
@@ -370,6 +392,7 @@ class ProjectController extends Controller
                 'description' => $project->description,
                 'story_source' => $project->story_source,
                 'source_type' => $project->source_type,
+                'story_from_file' => $project->story_from_file,
                 'is_public' => false,
                 'status' => ProjectStatus::Draft,
                 'total_credits_used' => 0,

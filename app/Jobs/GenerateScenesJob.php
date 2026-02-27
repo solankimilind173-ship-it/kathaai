@@ -9,6 +9,7 @@ use App\Jobs\MapSceneCharactersJob;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -79,53 +80,72 @@ class GenerateScenesJob implements ShouldQueue
             // Step 2: Clean old scenes (re-run safe)
             Scene::where('episode_id', $episode->id)->delete();
 
-            // Step 3: Save scenes in chunks (reduces memory for large episode scene lists)
+            // Step 3: Re-check episode still exists (may have been deleted by another process)
+            $episode = Episode::find($this->episodeId);
+            if (! $episode) {
+                Log::warning('GenerateScenesJob: episode was removed before saving scenes', [
+                    'episode_id' => $this->episodeId,
+                ]);
+                return;
+            }
             $episodeId = $episode->id;
-            collect($scenes)->filter(fn ($s) => ! empty($s['description'] ?? null))->chunk(20)->each(function ($chunk) use ($episodeId) {
-                foreach ($chunk as $scene) {
-                    Scene::create([
-                        'episode_id'   => $episodeId,
-                        'title'        => $scene['title'] ?? null,
-                        'location'     => $scene['location'] ?? null,
-                        'time_of_day'  => $scene['time_of_day'] ?? null,
-                        'mood'         => $scene['mood'] ?? null,
-                        'description'  => $scene['description'],
-                        'scene_number' => $scene['scene_number'] ?? 1,
+
+            // Step 4: Save scenes in chunks (reduces memory for large episode scene lists)
+            try {
+                collect($scenes)->filter(fn ($s) => ! empty($s['description'] ?? null))->chunk(20)->each(function ($chunk) use ($episodeId) {
+                    foreach ($chunk as $scene) {
+                        Scene::create([
+                            'episode_id'   => $episodeId,
+                            'title'        => $scene['title'] ?? null,
+                            'location'     => $scene['location'] ?? null,
+                            'time_of_day'  => $scene['time_of_day'] ?? null,
+                            'mood'         => $scene['mood'] ?? null,
+                            'description'  => $scene['description'],
+                            'scene_number' => $scene['scene_number'] ?? 1,
+                        ]);
+                    }
+                });
+            } catch (QueryException $e) {
+                if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'foreign key constraint')) {
+                    Log::warning('GenerateScenesJob: episode no longer exists, skipping scene insert', [
+                        'episode_id' => $this->episodeId,
                     ]);
+                    return;
                 }
-            });
-
-            // Mark success
-            $episode->update(['status' => 'scenes_generated']);
-
-            $project = $episode->project;
-            $project->load('user');
-            if ($project->user) {
-                app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
-                    $project->user,
-                    $project,
-                    'Scenes generated',
-                    'Scenes for episode "' . ($episode->title ?: 'Episode ' . $episode->episode_number) . '" have been generated.'
-                );
+                throw $e;
             }
 
-            // Step 4: Dispatch character mapping (chunked load to limit memory)
-            $episode->load('scenes');
-            foreach ($episode->scenes as $scene) {
-                MapSceneCharactersJob::dispatch($scene)->delay(now()->addSeconds(5));
+            // Mark success (re-fetch in case of race)
+            $episode = Episode::find($this->episodeId);
+            if ($episode) {
+                $episode->update(['status' => 'scenes_generated']);
+            }
+
+            $episode = Episode::with(['project.user', 'scenes'])->find($this->episodeId);
+            if ($episode) {
+                $project = $episode->project;
+                if ($project && $project->user) {
+                    app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
+                        $project->user,
+                        $project,
+                        'Scenes generated',
+                        'Scenes for episode "' . ($episode->title ?: 'Episode ' . $episode->episode_number) . '" have been generated.'
+                    );
+                }
+                foreach ($episode->scenes as $scene) {
+                    MapSceneCharactersJob::dispatch($scene)->delay(now()->addSeconds(5));
+                }
             }
 
         } catch (Throwable $e) {
-
             Log::error('GenerateScenesJob crashed', [
                 'episode_id' => $this->episodeId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-
-            // Fail gracefully
-            Episode::where('id', $this->episodeId)
-                ->update(['status' => 'scene_failed']);
+            if (Episode::where('id', $this->episodeId)->exists()) {
+                Episode::where('id', $this->episodeId)->update(['status' => 'scene_failed']);
+            }
         }
     }
 }
