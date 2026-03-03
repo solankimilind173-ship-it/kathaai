@@ -107,7 +107,6 @@ class ProjectController extends Controller
             'background_music' => $project->background_music ?? false,
         ]);
 
-        $timeline = $this->buildProjectTimeline($project);
         $projectAnalytics = $projectAnalyticsService->getAnalytics($project);
 
         $shareToken = $project->is_public ? $project->shareToken : null;
@@ -132,7 +131,12 @@ class ProjectController extends Controller
                 'intro_song' => $project->intro_song ?? false,
                 'background_music' => $project->background_music ?? false,
             ],
-            'timeline' => $timeline,
+            'subtitleStyles' => [
+                ['value' => 'default', 'label' => 'Default'],
+                ['value' => 'minimal', 'label' => 'Minimal'],
+                ['value' => 'bold', 'label' => 'Bold'],
+                ['value' => 'outline', 'label' => 'Outline'],
+            ],
             'statusLabel' => $project->status->label(),
             'sourceLabel' => $project->source_type->label(),
             'sceneRegenerationCosts' => [
@@ -167,33 +171,19 @@ class ProjectController extends Controller
         return back()->with(['shareUrl' => $shareUrl]);
     }
 
-    private function buildProjectTimeline(Project $project): array
+    public function updateSubtitleSettings(Request $request, Project $project)
     {
-        $items = [];
-        $items[] = [
-            'date' => $project->created_at?->toIso8601String(),
-            'label' => 'Project created',
-            'description' => null,
-        ];
-        foreach ($project->episodes ?? [] as $episode) {
-            if ($episode->created_at) {
-                $items[] = [
-                    'date' => $episode->created_at->toIso8601String(),
-                    'label' => 'Episode added',
-                    'description' => $episode->title ?: "Episode {$episode->id}",
-                ];
-            }
-        }
-        $lastLog = $project->renderLogs->first();
-        if ($lastLog && $lastLog->created_at) {
-            $items[] = [
-                'date' => $lastLog->created_at->toIso8601String(),
-                'label' => 'Last render activity',
-                'description' => $lastLog->message ?? null,
-            ];
-        }
-        usort($items, fn ($a, $b) => strcmp($b['date'] ?? '', $a['date'] ?? ''));
-        return array_slice($items, 0, 20);
+        $request->validate([
+            'default_subtitles_enabled' => 'nullable|boolean',
+            'default_subtitle_style' => 'nullable|string|max:64',
+        ]);
+
+        $project->update([
+            'default_subtitles_enabled' => $request->boolean('default_subtitles_enabled', true),
+            'default_subtitle_style' => $request->input('default_subtitle_style', 'default'),
+        ]);
+
+        return back()->with('success', 'Subtitle settings saved.');
     }
 
     public function create(CreditService $creditService)
@@ -259,6 +249,10 @@ class ProjectController extends Controller
             'reels_per_episode' => 'nullable|integer|min:0',
             'intro_song' => 'nullable|boolean',
             'background_music' => 'nullable|boolean',
+            'default_video_format' => 'nullable|string|in:instagram_reels,youtube',
+            'default_fps' => 'nullable|integer|in:24,30',
+            'default_subtitle_style' => 'nullable|string|max:64',
+            'default_subtitles_enabled' => 'nullable|boolean',
         ];
 
         $request->validate($rules);
@@ -357,6 +351,10 @@ class ProjectController extends Controller
             'reels_per_episode' => (int) ($request->reels ?? 0),
             'intro_song' => (bool) ($request->intro_song ?? false),
             'background_music' => (bool) ($request->background_music ?? false),
+            'default_video_format' => $request->input('default_video_format') ?: 'youtube',
+            'default_fps' => $request->input('default_fps') ?: 24,
+            'default_subtitle_style' => $request->input('default_subtitle_style') ?: 'default',
+            'default_subtitles_enabled' => $request->boolean('default_subtitles_enabled', true),
         ]);
 
         if (! empty($request->dub_languages)) {

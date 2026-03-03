@@ -19,12 +19,12 @@ export default function RenderModal({
     userCredits = 0,
 }) {
     const [settings, setSettings] = useState({
-        resolution: '1080p',
-        video_format: 'youtube',
-        format: '16:9',
-        fps: 24,
-        subtitle_style: 'default',
-        background_music: false,
+        resolution: project?.quality ?? '1080p',
+        video_format: project?.default_video_format ?? 'youtube',
+        format: project?.video_frame === '9:16' ? '9:16' : '16:9',
+        fps: project?.default_fps ?? 24,
+        subtitle_style: project?.default_subtitle_style ?? 'default',
+        background_music: !!project?.background_music,
     });
     const [estimate, setEstimate] = useState({ cost: 0, duration_minutes: 0, user_credits: userCredits });
     const [loading, setLoading] = useState(false);
@@ -50,6 +50,18 @@ export default function RenderModal({
             .catch(() => setEstimate((e) => ({ ...e, cost: 0 })))
             .finally(() => setLoading(false));
     }, [project?.id, settings.resolution, settings.video_format, settings.fps, settings.background_music, userCredits]);
+
+    useEffect(() => {
+        if (!open || !project) return;
+        setSettings({
+            resolution: project.quality ?? '1080p',
+            video_format: project.default_video_format ?? 'youtube',
+            format: project.video_frame === '9:16' ? '9:16' : '16:9',
+            fps: project.default_fps ?? 24,
+            subtitle_style: project.default_subtitle_style ?? 'default',
+            background_music: !!project.background_music,
+        });
+    }, [open, project]);
 
     useEffect(() => {
         if (open) fetchEstimate();

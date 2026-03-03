@@ -62,6 +62,9 @@ export default function Create({
         reels_per_episode: 0,
         intro_song: false,
         background_music: false,
+        default_video_format: 'youtube',
+        default_fps: 24,
+        default_subtitle_style: 'default',
     });
 
     const isLibrary = data.source_type === 'library';
@@ -93,6 +96,9 @@ export default function Create({
             formData.append('reels_per_episode', String(data.reels_per_episode));
             formData.append('intro_song', data.intro_song ? '1' : '0');
             formData.append('background_music', data.background_music ? '1' : '0');
+            if (data.default_video_format) formData.append('default_video_format', data.default_video_format);
+            if (data.default_fps) formData.append('default_fps', String(data.default_fps));
+            if (data.default_subtitle_style) formData.append('default_subtitle_style', data.default_subtitle_style);
             (data.dub_languages || []).forEach((id) => formData.append('dub_languages[]', id));
             formData.append('story_file', storyFile);
             router.post(route('projects.store'), formData, { forceFormData: true });
@@ -441,6 +447,86 @@ export default function Create({
                                     {videoTypes.length === 0 && (
                                         <p className="mt-2 text-sm text-gray-500">No video types configured. Default will be used.</p>
                                     )}
+                                </div>
+
+                                {/* Render defaults (applied to all future videos) */}
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <InputLabel value="Default resolution for renders" />
+                                        <p className="mt-1 text-sm text-stone-600">
+                                            This resolution will be used for all videos for this project by default.
+                                        </p>
+                                        <select
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            value={data.quality}
+                                            onChange={(e) => setData('quality', e.target.value)}
+                                        >
+                                            <option value="1080p">1080p</option>
+                                            {safePlan.allow_4k && <option value="4k">4K</option>}
+                                        </select>
+                                        <InputError message={errors.quality} className="mt-1" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Default video format" />
+                                        <p className="mt-1 text-sm text-stone-600">
+                                            Choose where you primarily plan to publish (used for aspect ratio and metadata).
+                                        </p>
+                                        <select
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            value={data.default_video_format}
+                                            onChange={(e) => setData('default_video_format', e.target.value)}
+                                        >
+                                            <option value="youtube">YouTube (16:9)</option>
+                                            <option value="instagram_reels">Instagram Reels (9:16)</option>
+                                        </select>
+                                        <InputError message={errors.default_video_format} className="mt-1" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Default FPS" />
+                                        <p className="mt-1 text-sm text-stone-600">
+                                            Frames per second to use when rendering videos for this project.
+                                        </p>
+                                        <select
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            value={data.default_fps}
+                                            onChange={(e) => setData('default_fps', Number(e.target.value))}
+                                        >
+                                            <option value={24}>24</option>
+                                            <option value={30}>30</option>
+                                        </select>
+                                        <InputError message={errors.default_fps} className="mt-1" />
+                                    </div>
+                                    <div>
+                                        <InputLabel value="Default subtitle style" />
+                                        <p className="mt-1 text-sm text-stone-600">
+                                            Subtitle appearance applied to all future renders (can be overridden per render if needed).
+                                        </p>
+                                        <select
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            value={data.default_subtitle_style}
+                                            onChange={(e) => setData('default_subtitle_style', e.target.value)}
+                                        >
+                                            <option value="default">Default</option>
+                                            <option value="minimal">Minimal</option>
+                                            <option value="bold">Bold</option>
+                                            <option value="outline">Outline</option>
+                                        </select>
+                                        <InputError message={errors.default_subtitle_style} className="mt-1" />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="inline-flex items-center mt-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={data.background_music}
+                                                onChange={(e) => setData('background_music', e.target.checked)}
+                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span className="ml-2 text-sm text-stone-700">
+                                                Enable background music by default for this project&apos;s videos
+                                            </span>
+                                        </label>
+                                        <InputError message={errors.background_music} className="mt-1" />
+                                    </div>
                                 </div>
                             </div>
                             )}

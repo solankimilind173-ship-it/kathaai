@@ -27,6 +27,10 @@ class Project extends Model
         'quality',
         'video_frame',
         'video_type',
+        'default_video_format',
+        'default_fps',
+        'default_subtitle_style',
+        'default_subtitles_enabled',
         'reels_per_episode',
         'intro_song',
         'background_music',
@@ -43,6 +47,7 @@ class Project extends Model
         'background_music' => 'boolean',
         'total_credits_used' => 'integer',
         'last_auto_render_at' => 'datetime',
+        'default_subtitles_enabled' => 'boolean',
     ];
 
     public function scopeNotArchived(Builder $query): Builder

@@ -101,7 +101,6 @@ class ProjectController extends Controller
             'background_music' => $project->background_music ?? false,
         ]);
 
-        $timeline = $this->buildProjectTimeline($project);
         $projectAnalytics = $projectAnalyticsService->getAnalytics($project);
 
         $shareToken = $project->is_public ? $project->shareToken : null;
@@ -126,7 +125,12 @@ class ProjectController extends Controller
                 'intro_song' => $project->intro_song ?? false,
                 'background_music' => $project->background_music ?? false,
             ],
-            'timeline' => $timeline,
+            'subtitleStyles' => [
+                ['value' => 'default', 'label' => 'Default'],
+                ['value' => 'minimal', 'label' => 'Minimal'],
+                ['value' => 'bold', 'label' => 'Bold'],
+                ['value' => 'outline', 'label' => 'Outline'],
+            ],
             'statusLabel' => $project->status->label(),
             'sourceLabel' => $project->source_type->label(),
             'sceneRegenerationCosts' => [
@@ -164,43 +168,6 @@ class ProjectController extends Controller
         return back()->with([
             'shareUrl' => $shareUrl,
         ]);
-    }
-
-    /**
-     * Build a chronological timeline of project activity (created, episodes, key render events).
-     */
-    private function buildProjectTimeline(Project $project): array
-    {
-        $items = [];
-
-        $items[] = [
-            'date' => $project->created_at?->toIso8601String(),
-            'label' => 'Project created',
-            'description' => null,
-        ];
-
-        foreach ($project->episodes ?? [] as $episode) {
-            if ($episode->created_at) {
-                $items[] = [
-                    'date' => $episode->created_at->toIso8601String(),
-                    'label' => 'Episode added',
-                    'description' => $episode->title ?: "Episode {$episode->id}",
-                ];
-            }
-        }
-
-        $lastLog = $project->renderLogs->first();
-        if ($lastLog && $lastLog->created_at) {
-            $items[] = [
-                'date' => $lastLog->created_at->toIso8601String(),
-                'label' => 'Last render activity',
-                'description' => $lastLog->message,
-            ];
-        }
-
-        usort($items, fn ($a, $b) => strcmp($b['date'] ?? '', $a['date'] ?? ''));
-
-        return array_slice($items, 0, 20);
     }
 
     public function create(CreditService $creditService)

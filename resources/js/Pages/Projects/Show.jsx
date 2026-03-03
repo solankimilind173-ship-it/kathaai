@@ -2,14 +2,13 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ShareLayout from '@/Layouts/ShareLayout';
 import Card from '@/Components/Card';
 import Badge from '@/Components/Badge';
+import InputLabel from '@/Components/InputLabel';
 import PageHeading from '@/Components/PageHeading';
 import SecondaryButton from '@/Components/SecondaryButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
-import Modal from '@/Components/Modal';
+import { useMemo, useState } from 'react';
 import useOnboarding from '@/Hooks/useOnboarding';
 import OnboardingTour from '@/Components/OnboardingTour';
 
@@ -58,6 +57,56 @@ const LIGHTING_OPTIONS = [
     { value: 'soft', label: 'Soft' },
     { value: 'low_key', label: 'Low key' },
 ];
+
+function SubtitleSettings({ project, subtitleStyles = [], disabled = false }) {
+    const form = useForm({
+        default_subtitles_enabled: project.default_subtitles_enabled ?? true,
+        default_subtitle_style: project.default_subtitle_style ?? 'default',
+    });
+    return (
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                form.patch(route('projects.subtitle-settings', project), { preserveScroll: true });
+            }}
+            className="space-y-4"
+        >
+            <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+                <div>
+                    <InputLabel value="Subtitles" />
+                    <label className="mt-1 flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={form.data.default_subtitles_enabled}
+                            onChange={(e) => form.setData('default_subtitles_enabled', e.target.checked)}
+                            disabled={disabled}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-gray-700">Enable subtitles</span>
+                    </label>
+                </div>
+                <div>
+                    <InputLabel value="Subtitle style" />
+                    <select
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        value={form.data.default_subtitle_style}
+                        onChange={(e) => form.setData('default_subtitle_style', e.target.value)}
+                        disabled={disabled}
+                    >
+                        {(subtitleStyles.length ? subtitleStyles : [{ value: 'default', label: 'Default' }, { value: 'minimal', label: 'Minimal' }, { value: 'bold', label: 'Bold' }, { value: 'outline', label: 'Outline' }]).map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <PrimaryButton type="submit" disabled={form.processing || disabled}>
+                    {form.processing ? 'Saving…' : 'Save subtitle settings'}
+                </PrimaryButton>
+            </div>
+        </form>
+    );
+}
 
 function SceneCard({
     scene,
@@ -325,7 +374,7 @@ export default function Show({
     projectAnalytics = null,
     estimatedCredits,
     creditOptions,
-    timeline = [],
+    subtitleStyles = [],
     statusLabel,
     sourceLabel,
     sceneRegenerationCosts = {},
@@ -376,34 +425,9 @@ export default function Show({
     const [draggedEpisodeId, setDraggedEpisodeId] = useState(null);
     const [dragOverEpisodeId, setDragOverEpisodeId] = useState(null);
     const [showAddEpisode, setShowAddEpisode] = useState(false);
-    const [showRenderModal, setShowRenderModal] = useState(false);
-    const [renderSettings, setRenderSettings] = useState({
-        resolution: '1080p',
-        video_format: 'youtube',
-        format: '16:9',
-        fps: 24,
-        subtitle_style: 'default',
-        background_music: false,
-    });
-    const [renderEstimate, setRenderEstimate] = useState({ cost: 0, duration_minutes: 0, user_credits: userCredits });
-    const [renderEstimateLoading, setRenderEstimateLoading] = useState(false);
     const [renderSubmitting, setRenderSubmitting] = useState(false);
 
     const addEpisodeForm = useForm({ title: '' });
-
-    const fetchRenderEstimate = useCallback(() => {
-        setRenderEstimateLoading(true);
-        const payload = { ...renderSettings, format: renderSettings.video_format === 'instagram_reels' ? '9:16' : '16:9' };
-        axios
-            .post(route('projects.render.estimate', project), payload)
-            .then(({ data }) => setRenderEstimate({ cost: data.cost ?? 0, duration_minutes: data.duration_minutes ?? 0, user_credits: data.user_credits ?? userCredits }))
-            .catch(() => setRenderEstimate((prev) => ({ ...prev, cost: 0 })))
-            .finally(() => setRenderEstimateLoading(false));
-    }, [project, renderSettings.resolution, renderSettings.video_format, renderSettings.fps, renderSettings.background_music, userCredits]);
-
-    useEffect(() => {
-        if (showRenderModal) fetchRenderEstimate();
-    }, [showRenderModal, fetchRenderEstimate]);
 
     function handleDragStart(e, episodeId) {
         setDraggedEpisodeId(episodeId);
@@ -457,6 +481,33 @@ export default function Show({
         router.delete(route('episodes.destroy', episode));
     }
 
+    function handleDirectRender() {
+        if (renderSubmitting) return;
+        setRenderSubmitting(true);
+
+        const resolution = project.quality ?? '1080p';
+        const videoFormat = project.default_video_format ?? 'youtube';
+        const format = project.video_frame === '9:16' ? '9:16' : '16:9';
+        const fps = project.default_fps ?? 24;
+        const subtitleStyle = project.default_subtitle_style ?? 'default';
+        const backgroundMusic = !!project.background_music;
+
+        router.post(
+            route('projects.render.start', project),
+            {
+                resolution,
+                format,
+                video_format: videoFormat,
+                fps,
+                subtitle_style: subtitleStyle,
+                background_music: backgroundMusic,
+            },
+            {
+                onFinish: () => setRenderSubmitting(false),
+            }
+        );
+    }
+
     const Layout = viewOnly ? ShareLayout : AuthenticatedLayout;
     const layoutProps = viewOnly ? {} : { header: <h2 className="text-xl font-semibold leading-tight text-gray-800">Project</h2> };
 
@@ -495,10 +546,11 @@ export default function Show({
                                     {canShowRenderButton && (
                                         <PrimaryButton
                                             type="button"
-                                            onClick={() => setShowRenderModal(true)}
+                                            onClick={handleDirectRender}
                                             data-tour-id="project-render-button"
+                                            disabled={renderSubmitting}
                                         >
-                                            Render
+                                            {renderSubmitting ? 'Starting…' : 'Render'}
                                         </PrimaryButton>
                                     )}
                                     {canRetryRender && (
@@ -509,9 +561,6 @@ export default function Show({
                                             Retry render
                                         </PrimaryButton>
                                     )}
-                                    <Link href={route('timeline.show', project)}>
-                                        <PrimaryButton disabled={isArchived}>Timeline</PrimaryButton>
-                                    </Link>
                                     <Link href={route('projects.index')}>
                                         <SecondaryButton>← Back to Projects</SecondaryButton>
                                     </Link>
@@ -796,43 +845,22 @@ export default function Show({
                         </div>
                     </Card>
 
-                    {/* 4. Timeline */}
+                    {/* 4. Subtitle */}
+                    {!viewOnly && (
                     <Card>
                         <Card.Header>
-                            <Card.Title>Timeline</Card.Title>
+                            <Card.Title>Subtitle</Card.Title>
                             <p className="mt-1 text-sm text-gray-500">
-                                Key project activity in chronological order.
+                                Default subtitle options applied when rendering this project.
                             </p>
                         </Card.Header>
-                        {timeline.length > 0 ? (
-                            <ul className="space-y-0">
-                                {timeline.map((item, i) => (
-                                    <li key={i} className="relative flex gap-4 pb-6 last:pb-0">
-                                        {i < timeline.length - 1 && (
-                                            <span
-                                                className="absolute left-[7px] top-5 -bottom-2 border-l-2 border-gray-200"
-                                                aria-hidden
-                                            />
-                                        )}
-                                        <span className="relative z-10 flex h-4 w-4 shrink-0 rounded-full bg-indigo-100" />
-                                        <div className="min-w-0 flex-1 pt-0.5">
-                                            <p className="text-sm font-medium text-gray-900">{item.label}</p>
-                                            {item.description && (
-                                                <p className="mt-0.5 text-sm text-gray-500">{item.description}</p>
-                                            )}
-                                            <p className="mt-1 text-xs text-gray-400">
-                                                {formatDate(item.date)}
-                                            </p>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-500">
-                                No timeline events yet.
-                            </p>
-                        )}
+                        <SubtitleSettings
+                            project={project}
+                            subtitleStyles={subtitleStyles}
+                            disabled={isArchived}
+                        />
                     </Card>
+                    )}
 
                     {/* 5. Video outputs (render runs with format, thumbnail, title, description, hashtags) */}
                     {!viewOnly && (project.render_run_logs?.length > 0) && (
@@ -996,104 +1024,6 @@ export default function Show({
                     </Card>
                     )}
 
-                    {/* Render settings modal */}
-                    <Modal show={showRenderModal} onClose={() => !renderSubmitting && setShowRenderModal(false)} maxWidth="lg">
-                        <div className="rounded-xl bg-white p-6 shadow-xl">
-                            <h3 className="text-lg font-semibold text-gray-900">Render settings</h3>
-                            <p className="mt-1 text-sm text-gray-500">Configure resolution, format, and options. Credits will be deducted when you confirm.</p>
-                            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Resolution</label>
-                                    <select
-                                        value={renderSettings.resolution}
-                                        onChange={(e) => setRenderSettings((s) => ({ ...s, resolution: e.target.value }))}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    >
-                                        <option value="1080p">1080p</option>
-                                        {plan?.allow_4k && <option value="4k">4K</option>}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Video format</label>
-                                    <select
-                                        value={renderSettings.video_format}
-                                        onChange={(e) => setRenderSettings((s) => ({ ...s, video_format: e.target.value, format: e.target.value === 'instagram_reels' ? '9:16' : '16:9' }))}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    >
-                                        <option value="youtube">YouTube (16:9)</option>
-                                        <option value="instagram_reels">Instagram Reels (9:16)</option>
-                                    </select>
-                                    <p className="mt-1 text-xs text-gray-500">Title, description and 10 hashtags will be generated for sharing.</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">FPS</label>
-                                    <select
-                                        value={renderSettings.fps}
-                                        onChange={(e) => setRenderSettings((s) => ({ ...s, fps: Number(e.target.value) }))}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    >
-                                        <option value={24}>24</option>
-                                        <option value={30}>30</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Subtitle style</label>
-                                    <select
-                                        value={renderSettings.subtitle_style}
-                                        onChange={(e) => setRenderSettings((s) => ({ ...s, subtitle_style: e.target.value }))}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    >
-                                        <option value="default">Default</option>
-                                        <option value="minimal">Minimal</option>
-                                        <option value="bold">Bold</option>
-                                    </select>
-                                </div>
-                                <div className="sm:col-span-2 flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        id="render-bg-music"
-                                        checked={renderSettings.background_music}
-                                        onChange={(e) => setRenderSettings((s) => ({ ...s, background_music: e.target.checked }))}
-                                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    <label htmlFor="render-bg-music" className="text-sm font-medium text-gray-700">Background music</label>
-                                </div>
-                            </div>
-                            <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                {renderEstimateLoading ? (
-                                    <p className="text-sm text-gray-500">Calculating cost…</p>
-                                ) : (
-                                    <p className="text-sm font-medium text-gray-900">
-                                        Estimated cost: <span className="font-semibold">{renderEstimate.cost} credits</span>
-                                        {renderEstimate.user_credits != null && (
-                                            <span className="ml-2 text-gray-500">
-                                                (you have {renderEstimate.user_credits})
-                                            </span>
-                                        )}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="mt-6 flex justify-end gap-2">
-                                <SecondaryButton type="button" onClick={() => setShowRenderModal(false)} disabled={renderSubmitting}>
-                                    Cancel
-                                </SecondaryButton>
-                                <PrimaryButton
-                                    type="button"
-                                    disabled={renderSubmitting || renderEstimateLoading || renderEstimate.cost > (renderEstimate.user_credits ?? 0)}
-                                    onClick={() => {
-                                        setRenderSubmitting(true);
-                                        const payload = { ...renderSettings, format: renderSettings.video_format === 'instagram_reels' ? '9:16' : '16:9' };
-                                        router.post(route('projects.render.start', project), payload, {
-                                            onFinish: () => setRenderSubmitting(false),
-                                            onSuccess: () => setShowRenderModal(false),
-                                        });
-                                    }}
-                                >
-                                    {renderSubmitting ? 'Starting…' : 'Confirm & start render'}
-                                </PrimaryButton>
-                            </div>
-                        </div>
-                    </Modal>
                 </div>
             </div>
 

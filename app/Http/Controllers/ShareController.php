@@ -40,7 +40,7 @@ class ShareController extends Controller
             'projectAnalytics' => null,
             'estimatedCredits' => null,
             'creditOptions' => null,
-            'timeline' => [],
+            'subtitleStyles' => [],
             'statusLabel' => $project->status->label(),
             'sourceLabel' => $project->source_type->label(),
             'sceneRegenerationCosts' => [],

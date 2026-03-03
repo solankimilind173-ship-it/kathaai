@@ -190,13 +190,17 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
     private function startAutoRender(Project $project): void
     {
         $format = ($project->video_frame === '9:16') ? '9:16' : '16:9';
-        $videoFormat = $format === '9:16' ? VideoFormat::InstagramReels : VideoFormat::YouTube;
+        $defaultVideoFormat = $project->default_video_format
+            ? VideoFormat::tryFrom($project->default_video_format) ?? null
+            : null;
+        $videoFormat = $defaultVideoFormat
+            ?? ($format === '9:16' ? VideoFormat::InstagramReels : VideoFormat::YouTube);
         $options = [
             'resolution' => $project->quality ?? '1080p',
             'format' => $format,
             'video_format' => $videoFormat->value,
-            'fps' => 24,
-            'subtitle_style' => 'default',
+            'fps' => $project->default_fps ?? 24,
+            'subtitle_style' => $project->default_subtitle_style ?? 'default',
             'background_music' => (bool) ($project->background_music ?? false),
             'auto_render' => true,
         ];

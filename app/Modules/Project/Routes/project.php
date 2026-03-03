@@ -5,7 +5,6 @@ use App\Modules\Project\Controllers\EpisodeController;
 use App\Modules\Project\Controllers\ProjectController;
 use App\Modules\Project\Controllers\RenderController;
 use App\Modules\Project\Controllers\SceneController;
-use App\Modules\Project\Controllers\TimelineController;
 use App\Modules\Project\Controllers\VideoController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +23,7 @@ Route::post('/projects/{project}/retry-structure', [ProjectController::class, 'r
 Route::patch('/projects/{project}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
 Route::patch('/projects/{project}/restore', [ProjectController::class, 'restore'])->name('projects.restore');
 Route::patch('/projects/{project}/visibility', [ProjectController::class, 'updateVisibility'])->name('projects.visibility');
+Route::patch('/projects/{project}/subtitle-settings', [ProjectController::class, 'updateSubtitleSettings'])->name('projects.subtitle-settings');
 Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
 Route::post('/projects/{project}/episodes', [EpisodeController::class, 'store'])->name('episodes.store');
@@ -35,9 +35,6 @@ Route::delete('/episodes/{episode}', [EpisodeController::class, 'destroy'])->nam
 Route::patch('/scenes/{scene}', [SceneController::class, 'update'])->name('scenes.update');
 Route::post('/scenes/{scene}/regenerate-image', [SceneController::class, 'regenerateImage'])->name('scenes.regenerate-image');
 Route::post('/scenes/{scene}/regenerate-voice', [SceneController::class, 'regenerateVoice'])->name('scenes.regenerate-voice');
-
-Route::get('/projects/{project}/timeline', [TimelineController::class, 'show'])->name('timeline.show');
-Route::patch('/projects/{project}/timeline', [TimelineController::class, 'update'])->name('timeline.update');
 
 Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
 Route::get('/projects/{project}/videos/{renderLog}', [VideoController::class, 'show'])->name('projects.videos.show');
