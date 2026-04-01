@@ -51,6 +51,7 @@ class UsersController extends Controller
     public function create(): Response
     {
         $plans = Plan::where('is_active', true)->orderBy('price')->get();
+
         return Inertia::render('Admin/Users/Create', ['plans' => $plans]);
     }
 
@@ -91,6 +92,7 @@ class UsersController extends Controller
     {
         $user->load('plan');
         $plans = Plan::where('is_active', true)->orderBy('price')->get();
+
         return Inertia::render('Admin/Users/Edit', ['user' => $user, 'plans' => $plans]);
     }
 
@@ -102,6 +104,7 @@ class UsersController extends Controller
             $data['suspended_at'] = $data['suspended_at'] ? now() : null;
         }
         $user->update($data);
+
         return redirect()->route('admin.users.show', $user)->with('success', 'User updated.');
     }
 
@@ -111,18 +114,21 @@ class UsersController extends Controller
             return redirect()->back()->with('error', 'You cannot delete your own account.');
         }
         $user->delete();
+
         return redirect()->route('admin.users.index')->with('success', 'User deleted.');
     }
 
     public function suspend(User $user): RedirectResponse
     {
         $user->update(['suspended_at' => $user->suspended_at ? null : now()]);
+
         return redirect()->back()->with('success', $user->suspended_at ? 'User suspended.' : 'User unsuspended.');
     }
 
     public function assignPlan(AssignPlanRequest $request, User $user): RedirectResponse
     {
         $user->update(['plan_id' => $request->input('plan_id')]);
+
         return redirect()->back()->with('success', 'Plan updated.');
     }
 
@@ -131,6 +137,7 @@ class UsersController extends Controller
         $amount = (int) $request->input('amount');
         $description = $request->input('description', 'Admin adjustment');
         $this->userService->adjustCredits($user, $amount, $description);
+
         return redirect()->back()->with('success', 'Credits updated.');
     }
 
@@ -152,6 +159,7 @@ class UsersController extends Controller
         fclose($handle);
 
         $result = $this->userService->importFromCsvRows($rows);
+
         return redirect()->route('admin.users.index')
             ->with('success', "Imported {$result['created']} users. Skipped {$result['skipped']}.");
     }
@@ -170,7 +178,7 @@ class UsersController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="users-' . date('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="users-'.date('Y-m-d').'.csv"',
         ];
 
         return response()->stream(function () use ($query) {

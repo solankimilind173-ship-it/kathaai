@@ -15,6 +15,7 @@ class OpenAIServiceTest extends TestCase
         parent::setUp();
         Storage::fake('public');
     }
+
     protected function tearDown(): void
     {
         Mockery::close();

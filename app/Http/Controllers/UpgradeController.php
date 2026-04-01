@@ -53,6 +53,7 @@ class UpgradeController extends Controller
             'max_video_minutes' => $plan->max_video_minutes,
             'max_dubbing_languages' => $plan->max_dubbing_languages,
             'max_reels_per_episode' => $plan->max_reels_per_episode,
+            'allow_trailer_generation' => (bool) $plan->allow_trailer_generation,
             'allow_4k' => (bool) $plan->allow_4k,
             'allow_intro_song_generation' => (bool) $plan->allow_intro_song_generation,
             'allow_background_music' => (bool) $plan->allow_background_music,
@@ -82,14 +83,15 @@ class UpgradeController extends Controller
         try {
             return $user->newSubscription('default', $priceId)
                 ->checkout([
-                    'success_url' => route('upgrade.success') . '?session_id={CHECKOUT_SESSION_ID}',
+                    'success_url' => route('upgrade.success').'?session_id={CHECKOUT_SESSION_ID}',
                     'cancel_url' => route('upgrade'),
                     'metadata' => [
                         'plan_id' => (string) $plan->id,
                     ],
                 ]);
         } catch (\Throwable $e) {
-            Log::error('Stripe checkout error: ' . $e->getMessage());
+            Log::error('Stripe checkout error: '.$e->getMessage());
+
             return redirect()->route('upgrade')
                 ->withErrors(['stripe' => 'Unable to start checkout. Please try again or contact support.']);
         }
@@ -137,7 +139,7 @@ class UpgradeController extends Controller
                 receiptUrl: $receiptUrl
             ));
         } catch (\Throwable $e) {
-            Log::error('Payment success email failed: ' . $e->getMessage(), ['user_id' => $user->id]);
+            Log::error('Payment success email failed: '.$e->getMessage(), ['user_id' => $user->id]);
         }
     }
 
@@ -163,7 +165,8 @@ class UpgradeController extends Controller
                 'expand' => ['subscription', 'subscription.latest_invoice', 'subscription.latest_invoice.charge'],
             ]);
         } catch (ApiErrorException $e) {
-            Log::warning('Stripe session retrieve failed: ' . $e->getMessage());
+            Log::warning('Stripe session retrieve failed: '.$e->getMessage());
+
             return redirect()->route('upgrade')->withErrors(['session' => 'Could not verify payment.']);
         }
 

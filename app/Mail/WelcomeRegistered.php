@@ -20,7 +20,7 @@ class WelcomeRegistered extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welcome to ' . config('app.name'),
+            subject: 'Welcome to '.config('app.name'),
             replyTo: [config('mail.from.address')],
         );
     }

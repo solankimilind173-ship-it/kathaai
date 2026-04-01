@@ -37,6 +37,7 @@ class AuthenticatedSessionController extends Controller
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+
             return back()->withErrors(['email' => 'This account has been suspended.']);
         }
 
@@ -44,6 +45,7 @@ class AuthenticatedSessionController extends Controller
             $request->session()->put('two_factor.user_id', $user->id);
             $request->session()->put('two_factor.remember', $request->boolean('remember'));
             Auth::guard('web')->logout();
+
             return redirect()->route('two-factor.challenge');
         }
 

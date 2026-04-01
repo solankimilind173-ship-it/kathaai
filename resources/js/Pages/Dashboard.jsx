@@ -43,7 +43,9 @@ export default function Dashboard({
     }, []);
 
     const showTips = !tipsDismissed && latestProjects.length < 3;
-    const showOnboardingTour = onboarding.status !== 'completed' && latestProjects.length === 0;
+    // Only show overlay when tour is in progress; don't block dashboard on first load
+    const showOnboardingTour = onboarding.status === 'in_progress' && latestProjects.length === 0;
+    const canStartOnboarding = onboarding.status === 'not_started' && latestProjects.length === 0;
     const dismissTips = () => {
         try {
             localStorage.setItem(TIPS_DISMISSED_KEY, '1');
@@ -59,12 +61,6 @@ export default function Dashboard({
             target: '[data-tour-id="dashboard-create-project"]',
         },
     ];
-
-    useEffect(() => {
-        if (showOnboardingTour && onboarding.status === 'not_started') {
-            startTour();
-        }
-    }, [showOnboardingTour, onboarding.status, startTour]);
 
     return (
         <AuthenticatedLayout
@@ -208,9 +204,20 @@ export default function Dashboard({
                     {latestProjects.length === 0 ? (
                         <Card className="border-amber-200/20 py-10 text-center">
                             <p className="text-stone-600">No projects yet.</p>
-                            <Link href={route('projects.create')} className="mt-4 inline-block" data-tour-id="dashboard-create-project">
-                                <PrimaryButton>Create your first project</PrimaryButton>
-                            </Link>
+                            <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                                <Link href={route('projects.create')} className="inline-block" data-tour-id="dashboard-create-project">
+                                    <PrimaryButton>Create your first project</PrimaryButton>
+                                </Link>
+                                {canStartOnboarding && (
+                                    <button
+                                        type="button"
+                                        onClick={startTour}
+                                        className="text-sm font-medium text-amber-600 hover:text-amber-700"
+                                    >
+                                        Take a quick tour
+                                    </button>
+                                )}
+                            </div>
                         </Card>
                     ) : (
                         <div className="space-y-3">

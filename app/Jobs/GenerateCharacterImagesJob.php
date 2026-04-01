@@ -34,13 +34,14 @@ class GenerateCharacterImagesJob implements ShouldQueue
         $project = Project::find($this->projectId);
         if (! $project) {
             Log::warning('GenerateCharacterImagesJob: project no longer exists', ['project_id' => $this->projectId]);
+
             return;
         }
 
         try {
             $project->characters()->whereNotNull('image_prompt')->chunk(5, function ($characters) use ($ai, $project) {
                 foreach ($characters as $character) {
-                    $filename = Str::slug($character->name) . '-' . uniqid();
+                    $filename = Str::slug($character->name).'-'.uniqid();
 
                     $path = $ai->generateCharacterImage(
                         $character->image_prompt,
@@ -73,6 +74,7 @@ class GenerateCharacterImagesJob implements ShouldQueue
                 Log::warning('GenerateCharacterImagesJob: project or character no longer exists', [
                     'project_id' => $this->projectId,
                 ]);
+
                 return;
             }
             throw $e;
@@ -87,5 +89,4 @@ class GenerateCharacterImagesJob implements ShouldQueue
             }
         }
     }
-
 }

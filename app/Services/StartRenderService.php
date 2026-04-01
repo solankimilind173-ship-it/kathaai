@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ProjectStatus;
 use App\Enums\VideoFormat;
 use App\Jobs\RenderProjectJob;
+use App\Models\Plan;
 use App\Models\Project;
 use App\Models\ProjectEngagement;
 use App\Models\RenderLog;
@@ -34,6 +35,7 @@ class StartRenderService
         $user = $user ?? $project->user;
         if (! $user) {
             Log::warning('StartRenderService: no user for project', ['project_id' => $project->id]);
+
             return null;
         }
 
@@ -45,6 +47,7 @@ class StartRenderService
                 Log::info('StartRenderService: auto render disabled by config', [
                     'project_id' => $project->id,
                 ]);
+
                 return null;
             }
 
@@ -54,6 +57,7 @@ class StartRenderService
                     'project_id' => $project->id,
                     'last_auto_render_at' => $lastAutoRenderAt,
                 ]);
+
                 return null;
             }
 
@@ -65,6 +69,7 @@ class StartRenderService
                 Log::info('StartRenderService: auto render skipped because a render is already pending or running', [
                     'project_id' => $project->id,
                 ]);
+
                 return null;
             }
         }
@@ -78,6 +83,19 @@ class StartRenderService
         $backgroundMusic = (bool) ($options['background_music'] ?? $project->background_music ?? false);
 
         $plan = $user->plan;
+        $trailer = (bool) ($options['trailer'] ?? false);
+
+        if ($trailer && ! $this->canGenerateTrailer($project, $plan)) {
+            Log::info('StartRenderService: trailer generation disallowed', [
+                'project_id' => $project->id,
+                'plan_id' => $plan?->id,
+                'duration_minutes' => $this->getProjectDurationMinutes($project),
+                'allow_trailer' => $plan?->allow_trailer_generation,
+            ]);
+
+            return null;
+        }
+
         if ($resolution === '4k' && ! ($plan && $plan->allow_4k)) {
             $resolution = '1080p';
         }
@@ -97,6 +115,7 @@ class StartRenderService
                 'required' => $amount,
                 'available' => $user->credits,
             ]);
+
             return null;
         }
 
@@ -127,9 +146,22 @@ class StartRenderService
             'fps' => $fps,
             'subtitle_style' => $subtitleStyle,
             'background_music' => $backgroundMusic,
+            'trailer' => $trailer,
+            'video_provider' => config('kathaai.video_provider', 'ffmpeg'),
         ]);
 
         return $renderLog;
+    }
+
+    public function canGenerateTrailer(Project $project, ?Plan $plan): bool
+    {
+        if (! $plan || ! $plan->allow_trailer_generation) {
+            return false;
+        }
+
+        $durationMinutes = $this->getProjectDurationMinutes($project);
+
+        return $durationMinutes > 60;
     }
 
     public function getProjectDurationMinutes(Project $project): float
@@ -137,8 +169,10 @@ class StartRenderService
         $projectId = $project->id;
         $totalSeconds = $project->scenes()->get()->sum(function ($scene) use ($projectId) {
             $settings = $scene->sceneRenderSettings()->where('project_id', $projectId)->first();
+
             return $settings?->duration_trimmed ?? $scene->duration ?? 0;
         });
+
         return round($totalSeconds / 60, 2) ?: (float) ($project->video_minutes ?? 5);
     }
 }

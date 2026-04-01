@@ -19,6 +19,7 @@ use Inertia\Response;
 class RegisteredUserController extends Controller
 {
     private const OTP_CACHE_PREFIX = 'registration_otp:';
+
     private const OTP_TTL_SECONDS = 600; // 10 minutes
 
     /**
@@ -43,7 +44,7 @@ class RegisteredUserController extends Controller
         ]);
 
         $otp = (string) random_int(100000, 999999);
-        Cache::put(self::OTP_CACHE_PREFIX . $validated['email'], $otp, self::OTP_TTL_SECONDS);
+        Cache::put(self::OTP_CACHE_PREFIX.$validated['email'], $otp, self::OTP_TTL_SECONDS);
 
         $request->session()->put('pending_registration', [
             'name' => $validated['name'],
@@ -68,12 +69,12 @@ class RegisteredUserController extends Controller
     public function resendOtp(Request $request): RedirectResponse
     {
         $pending = $request->session()->get('pending_registration');
-        if (!$pending || empty($pending['email'])) {
+        if (! $pending || empty($pending['email'])) {
             return back()->withErrors(['email' => 'Please start registration again.']);
         }
 
         $otp = (string) random_int(100000, 999999);
-        Cache::put(self::OTP_CACHE_PREFIX . $pending['email'], $otp, self::OTP_TTL_SECONDS);
+        Cache::put(self::OTP_CACHE_PREFIX.$pending['email'], $otp, self::OTP_TTL_SECONDS);
 
         Mail::to($pending['email'])->send(new RegistrationOtp(
             $pending['email'],
@@ -97,11 +98,11 @@ class RegisteredUserController extends Controller
         ]);
 
         $pending = $request->session()->get('pending_registration');
-        if (!$pending || ($pending['email'] ?? '') !== $request->email) {
+        if (! $pending || ($pending['email'] ?? '') !== $request->email) {
             return back()->withErrors(['otp' => 'Please request a new verification code.']);
         }
 
-        $cachedOtp = Cache::get(self::OTP_CACHE_PREFIX . $request->email);
+        $cachedOtp = Cache::get(self::OTP_CACHE_PREFIX.$request->email);
         if ($cachedOtp === null || $cachedOtp !== $request->otp) {
             return back()->withErrors(['otp' => 'The verification code is invalid or has expired.']);
         }
@@ -112,7 +113,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($pending['password']),
         ]);
 
-        Cache::forget(self::OTP_CACHE_PREFIX . $request->email);
+        Cache::forget(self::OTP_CACHE_PREFIX.$request->email);
         $request->session()->forget('pending_registration');
 
         event(new Registered($user));

@@ -22,7 +22,7 @@ class PasswordChanged extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your password was changed – ' . config('app.name'),
+            subject: 'Your password was changed – '.config('app.name'),
             replyTo: [config('mail.from.address')],
         );
     }

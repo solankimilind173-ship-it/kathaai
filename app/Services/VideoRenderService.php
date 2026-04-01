@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\RenderLog;
 use App\Models\Scene;
-use App\Models\SceneRenderSettings;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
@@ -36,17 +35,28 @@ class VideoRenderService
         $format = $options['format'] ?? '16:9';
         $fps = (int) ($options['fps'] ?? 24);
         $applyWatermark = (bool) ($options['apply_watermark'] ?? true);
+        $useKenBurns = (bool) ($options['ken_burns'] ?? config('kathaai.ken_burns', true));
+        $videoProvider = $options['video_provider'] ?? config('kathaai.video_provider', 'ffmpeg');
 
         [$width, $height] = $this->dimensions($resolution, $format);
+        $ratio = $format === '9:16' ? config('services.runway.ratio_9_16', '720:1280') : config('services.runway.ratio_16_9', '1280:720');
 
         $scenes = $this->getOrderedScenesWithDuration($project);
         if (empty($scenes)) {
             throw new \RuntimeException('Project has no scenes to render. Add episodes and scenes first.');
         }
 
+        $trailer = (bool) ($options['trailer'] ?? false);
+        if ($trailer) {
+            $scenes = $this->getTrailerSceneList($scenes, 60);
+            if (empty($scenes)) {
+                throw new \RuntimeException('Trailer rendering requires at least one valid scene and total project duration > 60 minutes.');
+            }
+        }
+
         $this->ensureFfmpegAvailable();
 
-        $tempDir = storage_path('app/renders-temp/' . uniqid('render_' . $renderLog->id . '_', true));
+        $tempDir = storage_path('app/renders-temp/'.uniqid('render_'.$renderLog->id.'_', true));
         if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true)) {
             throw new \RuntimeException('Could not create temporary render directory.');
         }
@@ -61,7 +71,10 @@ class VideoRenderService
                     $sceneData['duration_seconds'],
                     $width,
                     $height,
-                    $fps
+                    $fps,
+                    $useKenBurns,
+                    $videoProvider,
+                    $ratio
                 );
                 if ($segmentPath) {
                     $segmentPaths[] = $segmentPath;
@@ -78,11 +91,11 @@ class VideoRenderService
                 throw new \RuntimeException('No segments could be created. Ensure FFmpeg is installed and on PATH. See logs for details.');
             }
 
-            $concatPath = $tempDir . '/concat.txt';
-            $concatContent = implode("\n", array_map(fn ($p) => "file '" . str_replace("'", "'\\''", $p) . "'", $segmentPaths));
+            $concatPath = $tempDir.'/concat.txt';
+            $concatContent = implode("\n", array_map(fn ($p) => "file '".str_replace("'", "'\\''", $p)."'", $segmentPaths));
             file_put_contents($concatPath, $concatContent);
 
-            $rawOutputPath = $tempDir . '/output.mp4';
+            $rawOutputPath = $tempDir.'/output.mp4';
             $result = Process::run(array_merge(
                 [$this->ffmpegPath(), '-y', '-f', 'concat', '-safe', '0', '-i', $concatPath],
                 ['-c', 'copy', $rawOutputPath]
@@ -93,7 +106,7 @@ class VideoRenderService
                     'stderr' => $result->errorOutput(),
                     'stdout' => $result->output(),
                 ]);
-                throw new \RuntimeException('FFmpeg concat failed: ' . $result->errorOutput());
+                throw new \RuntimeException('FFmpeg concat failed: '.$result->errorOutput());
             }
 
             $finalPath = $rawOutputPath;
@@ -115,7 +128,7 @@ class VideoRenderService
             }
 
             $thumbnailRelPath = null;
-            $thumbPath = $tempDir . '/thumb.jpg';
+            $thumbPath = $tempDir.'/thumb.jpg';
             $thumbResult = Process::run([
                 $this->ffmpegPath(), '-y', '-i', $fullDestPath, '-ss', '00:00:01', '-vframes', '1', '-q:v', '2', $thumbPath,
             ]);
@@ -137,11 +150,43 @@ class VideoRenderService
         }
     }
 
+    /**
+     * Build scene list for trailer duration cap (seconds).
+     *
+     * @param  array<int, array{scene: Scene, duration_seconds: int}>  $scenes
+     */
+    private function getTrailerSceneList(array $scenes, int $maxSeconds = 60): array
+    {
+        $result = [];
+        $total = 0;
+
+        foreach ($scenes as $item) {
+            if ($total >= $maxSeconds) {
+                break;
+            }
+
+            $remaining = $maxSeconds - $total;
+            $duration = min($item['duration_seconds'], $remaining);
+            if ($duration <= 0) {
+                continue;
+            }
+
+            $result[] = [
+                'scene' => $item['scene'],
+                'duration_seconds' => $duration,
+            ];
+            $total += $duration;
+        }
+
+        return $result;
+    }
+
     private function ffmpegPath(): string
     {
         if ($this->resolvedFfmpegPath !== null) {
             return $this->resolvedFfmpegPath;
         }
+
         return FfmpegPathResolver::resolve();
     }
 
@@ -184,10 +229,23 @@ class VideoRenderService
         return $result;
     }
 
-    private function createSegment(string $tempDir, int $index, Scene $scene, int $durationSeconds, int $width, int $height, int $fps): ?string
+    private function createSegment(string $tempDir, int $index, Scene $scene, int $durationSeconds, int $width, int $height, int $fps, bool $useKenBurns = true, string $videoProvider = 'ffmpeg', string $ratio = '1280:720'): ?string
     {
-        $imagePath = $this->resolveSceneImagePath($scene, $width, $height, $tempDir, $index);
+        $segmentPath = $tempDir.'/seg_'.sprintf('%04d', $index).'.mp4';
         $audioPath = $this->resolveSceneAudioPath($scene, $durationSeconds, $tempDir, $index);
+
+        if ($videoProvider === 'runway' && $this->runwayService()->isConfigured()) {
+            $runwayPath = $this->createSegmentWithRunway($tempDir, $index, $scene, $durationSeconds, $width, $height, $ratio, $audioPath, $segmentPath);
+            if ($runwayPath) {
+                return $runwayPath;
+            }
+            Log::warning('VideoRenderService: Runway segment failed, falling back to FFmpeg', [
+                'scene_id' => $scene->id,
+                'index' => $index,
+            ]);
+        }
+
+        $imagePath = $this->resolveSceneImagePath($scene, $width, $height, $tempDir, $index);
 
         if (! $imagePath || ! is_file($imagePath)) {
             $imagePath = $this->createPlaceholderImage($tempDir, $index, $width, $height);
@@ -198,12 +256,14 @@ class VideoRenderService
                 'index' => $index,
                 'scene_has_image_url' => ! empty($scene->image_url),
             ]);
+
             return null;
         }
 
-        $segmentPath = $tempDir . '/seg_' . sprintf('%04d', $index) . '.mp4';
+        $filter = $useKenBurns
+            ? $this->buildKenBurnsFilter($width, $height, $fps)
+            : "scale={$width}:{$height}:force_original_aspect_ratio=decrease,pad={$width}:{$height}:(ow-iw)/2:(oh-ih)/2,fps={$fps}";
 
-        $filter = "scale={$width}:{$height}:force_original_aspect_ratio=decrease,pad={$width}:{$height}:(ow-iw)/2:(oh-ih)/2,fps={$fps}";
         $args = [$this->ffmpegPath(), '-y', '-loop', '1', '-i', $imagePath];
         if ($audioPath && is_file($audioPath)) {
             $args[] = '-i';
@@ -223,16 +283,127 @@ class VideoRenderService
         ]);
         $result = Process::run($args);
 
+        if (! $result->successful() && $useKenBurns) {
+            Log::warning('VideoRenderService: Ken Burns segment failed, falling back to static', [
+                'scene_id' => $scene->id,
+                'index' => $index,
+                'stderr' => $result->errorOutput(),
+            ]);
+
+            return $this->createSegment($tempDir, $index, $scene, $durationSeconds, $width, $height, $fps, false, $videoProvider, $ratio);
+        }
+
         if (! $result->successful()) {
             Log::warning('VideoRenderService: segment creation failed', [
                 'scene_id' => $scene->id,
                 'index' => $index,
                 'stderr' => $result->errorOutput(),
             ]);
+
             return null;
         }
 
         return $segmentPath;
+    }
+
+    private function runwayService(): RunwayService
+    {
+        return app(RunwayService::class);
+    }
+
+    /**
+     * Generate a segment using Runway image-to-video, then mux with scene audio. Returns segment path or null.
+     */
+    private function createSegmentWithRunway(string $tempDir, int $index, Scene $scene, int $durationSeconds, int $width, int $height, string $ratio, ?string $audioPath, string $segmentPath): ?string
+    {
+        $imagePath = $this->resolveSceneImagePath($scene, $width, $height, $tempDir, $index);
+        if (! $imagePath || ! is_file($imagePath)) {
+            return null;
+        }
+
+        $path = $this->storagePathFromUrl($scene->image_url);
+        if (! $path) {
+            return null;
+        }
+        $storagePath = str_starts_with($path, 'storage/') ? $path : 'storage/'.$path;
+        $imageUrl = rtrim(config('app.url'), '/').'/'.ltrim($storagePath, '/');
+        $promptText = mb_substr(trim($scene->description ?? ''), 0, 1000);
+        if ($promptText === '') {
+            $promptText = 'Scene with subtle motion.';
+        }
+
+        $runwayDuration = min(10, max(2, $durationSeconds));
+        $runway = $this->runwayService();
+        $runwayVideoPath = $runway->imageToVideo($imageUrl, $promptText, $runwayDuration, $ratio);
+        if (! $runwayVideoPath || ! is_file($runwayVideoPath)) {
+            return null;
+        }
+
+        try {
+            $padSeconds = max(0, $durationSeconds - $runwayDuration);
+            $args = [
+                $this->ffmpegPath(), '-y',
+                '-i', $runwayVideoPath,
+            ];
+            if ($audioPath && is_file($audioPath)) {
+                $args[] = '-i';
+                $args[] = $audioPath;
+            } else {
+                $args[] = '-f';
+                $args[] = 'lavfi';
+                $args[] = '-i';
+                $args[] = 'anullsrc=r=44100:cl=stereo';
+            }
+            $scaleFilter = "scale={$width}:{$height}:force_original_aspect_ratio=decrease,pad={$width}:{$height}:(ow-iw)/2:(oh-ih)/2";
+            if ($padSeconds > 0) {
+                $args[] = '-filter_complex';
+                $args[] = "[0:v]tpad=stop_mode=clone:stop_duration={$padSeconds},{$scaleFilter}[v]";
+                $args[] = '-map';
+                $args[] = '[v]';
+                $args[] = '-map';
+                $args[] = '1:a';
+            } else {
+                $args[] = '-filter_complex';
+                $args[] = "[0:v]{$scaleFilter}[v]";
+                $args[] = '-map';
+                $args[] = '[v]';
+                $args[] = '-map';
+                $args[] = '1:a';
+            }
+            $args = array_merge($args, [
+                '-t', (string) $durationSeconds,
+                '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
+                $segmentPath,
+            ]);
+            $result = Process::run($args);
+            if (! $result->successful()) {
+                Log::warning('VideoRenderService: Runway segment mux failed', [
+                    'scene_id' => $scene->id,
+                    'stderr' => $result->errorOutput(),
+                ]);
+
+                return null;
+            }
+
+            return $segmentPath;
+        } finally {
+            @unlink($runwayVideoPath);
+        }
+    }
+
+    /**
+     * Build FFmpeg filter for subtle Ken Burns (zoom) effect.
+     * Uses d=1 so zoompan outputs one frame per input frame; segment length is controlled by -t in createSegment().
+     */
+    private function buildKenBurnsFilter(int $width, int $height, int $fps): string
+    {
+        $zoomExpr = 'min(zoom+0.001,1.15)';
+        $xExpr = 'iw/2-(iw/zoom/2)';
+        $yExpr = 'ih/2-(ih/zoom/2)';
+        $scalePad = "scale={$width}:{$height}:force_original_aspect_ratio=decrease,pad={$width}:{$height}:(ow-iw)/2:(oh-ih)/2";
+        $zoompan = "zoompan=z='{$zoomExpr}':d=1:x='{$xExpr}':y='{$yExpr}':s={$width}x{$height}:fps={$fps}";
+
+        return "{$scalePad},{$zoompan}";
     }
 
     private function resolveSceneImagePath(Scene $scene, int $width, int $height, string $tempDir, int $index): ?string
@@ -246,6 +417,7 @@ class VideoRenderService
             return null;
         }
         $fullPath = Storage::disk('public')->path($path);
+
         return is_file($fullPath) ? $fullPath : null;
     }
 
@@ -260,6 +432,7 @@ class VideoRenderService
             return null;
         }
         $fullPath = Storage::disk('public')->path($path);
+
         return is_file($fullPath) ? $fullPath : null;
     }
 
@@ -271,12 +444,13 @@ class VideoRenderService
         if (str_starts_with($url, 'http')) {
             return null;
         }
+
         return str_starts_with($url, 'storage/') ? substr($url, 8) : $url;
     }
 
     private function createPlaceholderImage(string $tempDir, int $index, int $width, int $height): ?string
     {
-        $path = $tempDir . '/placeholder_' . $index . '.png';
+        $path = $tempDir.'/placeholder_'.$index.'.png';
         $result = Process::run([
             $this->ffmpegPath(), '-y', '-f', 'lavfi', '-i', "color=c=#1c1917:s={$width}x{$height}:d=1", '-frames:v', '1', $path,
         ]);
@@ -291,6 +465,7 @@ class VideoRenderService
                 'stderr' => $result->errorOutput(),
                 'stdout' => $result->output(),
             ]);
+
             return null;
         }
 

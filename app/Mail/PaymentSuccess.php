@@ -28,7 +28,7 @@ class PaymentSuccess extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Payment successful – Your ' . $this->plan->name . ' plan – ' . config('app.name'),
+            subject: 'Payment successful – Your '.$this->plan->name.' plan – '.config('app.name'),
             replyTo: [config('mail.from.address')],
         );
     }

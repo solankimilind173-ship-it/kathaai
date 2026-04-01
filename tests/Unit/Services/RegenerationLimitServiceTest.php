@@ -7,13 +7,13 @@ use App\Models\Project;
 use App\Models\Scene;
 use App\Models\User;
 use App\Services\RegenerationLimitService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class RegenerationLimitServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private RegenerationLimitService $service;
 

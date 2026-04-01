@@ -24,6 +24,7 @@ class CsvUserImportStructure implements ValidationRule
         $handle = @fopen($value->getRealPath(), 'r');
         if ($handle === false) {
             $fail('The CSV file could not be read.');
+
             return;
         }
 
@@ -31,6 +32,7 @@ class CsvUserImportStructure implements ValidationRule
         if ($header === false || empty($header)) {
             fclose($handle);
             $fail('The CSV file must have a header row.');
+
             return;
         }
 
@@ -41,6 +43,7 @@ class CsvUserImportStructure implements ValidationRule
         if ($nameIdx === false || $emailIdx === false) {
             fclose($handle);
             $fail('The CSV must contain both "name" and "email" columns (case-insensitive).');
+
             return;
         }
 
@@ -54,10 +57,12 @@ class CsvUserImportStructure implements ValidationRule
 
             if ($email === '') {
                 $errors[] = "Row {$rowNum}: email is required.";
+
                 continue;
             }
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors[] = "Row {$rowNum}: invalid email.";
+
                 continue;
             }
             if (strlen($name) > 255) {

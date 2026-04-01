@@ -76,4 +76,3 @@ class OnboardingController extends Controller
         return back();
     }
 }
-

@@ -31,6 +31,7 @@ class FfmpegPathResolver
             $result = Process::run([$path, '-version']);
             if ($result->successful()) {
                 self::$resolved = $path;
+
                 return $path;
             }
         }

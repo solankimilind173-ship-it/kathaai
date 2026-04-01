@@ -25,15 +25,15 @@ class StoryChunker
 
         foreach ($sentences as $sentence) {
 
-            if (strlen($currentChunk . ' ' . $sentence) > $maxLength) {
+            if (strlen($currentChunk.' '.$sentence) > $maxLength) {
                 $chunks[] = trim($currentChunk);
                 $currentChunk = $sentence;
             } else {
-                $currentChunk .= ' ' . $sentence;
+                $currentChunk .= ' '.$sentence;
             }
         }
 
-        if (!empty($currentChunk)) {
+        if (! empty($currentChunk)) {
             $chunks[] = trim($currentChunk);
         }
 

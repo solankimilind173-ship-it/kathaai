@@ -17,11 +17,11 @@ class CreditCalculator
         $cost += count($options['dub_languages'] ?? [])
             * config('ai_costs.dubbing_per_language');
 
-        if (!empty($options['intro_song'])) {
+        if (! empty($options['intro_song'])) {
             $cost += config('ai_costs.intro_song_generation');
         }
 
-        if (!empty($options['background_music'])) {
+        if (! empty($options['background_music'])) {
             $cost += config('ai_costs.background_music');
         }
 

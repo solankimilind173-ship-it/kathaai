@@ -60,12 +60,12 @@ class SettingsController extends Controller
 
         $user = $request->user();
         $secret = $request->session()->get('two_factor.setup_secret');
-        if (!$secret) {
+        if (! $secret) {
             return redirect()->route('settings.index')->withErrors(['code' => 'Setup expired. Please try again.']);
         }
 
         $code = $request->string('code')->toString();
-        if (!$twoFactor->verifyCode($secret, $code)) {
+        if (! $twoFactor->verifyCode($secret, $code)) {
             throw ValidationException::withMessages(['code' => ['The provided code was invalid.']]);
         }
 
@@ -97,6 +97,7 @@ class SettingsController extends Controller
     public function cancelTwoFactorSetup(Request $request): RedirectResponse
     {
         $request->session()->forget('two_factor.setup_secret');
+
         return redirect()->route('settings.index');
     }
 
@@ -163,7 +164,7 @@ class SettingsController extends Controller
             ])->toArray(),
         ];
 
-        $filename = 'kathaai-data-' . $user->id . '-' . now()->format('Y-m-d-His') . '.json';
+        $filename = 'kathaai-data-'.$user->id.'-'.now()->format('Y-m-d-His').'.json';
 
         return response()->streamDownload(
             function () use ($data) {

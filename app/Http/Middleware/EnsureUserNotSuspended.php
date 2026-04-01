@@ -17,10 +17,10 @@ class EnsureUserNotSuspended
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+
             return redirect()->route('login')->withErrors(['email' => 'This account has been suspended.']);
         }
 
         return $next($request);
     }
 }
-

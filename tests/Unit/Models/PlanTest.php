@@ -5,12 +5,12 @@ namespace Tests\Unit\Models;
 use App\Models\FeatureDefinition;
 use App\Models\Plan;
 use App\Models\PlanFeature;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
 
 class PlanTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     public function test_get_feature_value_returns_plan_attribute_when_no_plan_feature(): void
     {
@@ -109,5 +109,19 @@ class PlanTest extends TestCase
             'value' => '3',
         ]);
         $this->assertSame(3, $plan->max_projects);
+    }
+
+    public function test_get_feature_value_returns_trailer_generation_flag(): void
+    {
+        $plan = Plan::create([
+            'name' => 'Pro',
+            'slug' => 'pro',
+            'price' => 19.99,
+            'is_active' => true,
+            'allow_trailer_generation' => true,
+        ]);
+
+        $this->assertTrue($plan->getFeatureValue('allow_trailer_generation'));
+        $this->assertTrue($plan->allow_trailer_generation);
     }
 }

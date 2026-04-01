@@ -14,6 +14,7 @@ class Scene extends Model
         'description',
         'image_url',
         'voice_url',
+        'caption_url',
         'duration',
         'credits_used',
         'status',

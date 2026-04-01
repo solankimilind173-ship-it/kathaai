@@ -8,12 +8,12 @@ use App\Models\Project;
 use App\Models\Scene;
 use App\Models\User;
 use App\Services\CreditService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
 
 class CreditServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private CreditService $service;
 

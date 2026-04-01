@@ -26,6 +26,7 @@ class SubscriptionsController extends Controller
             $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('slug', 'like', "%{$search}%"));
         }
         $plans = $query->paginate(15)->withQueryString();
+
         return Inertia::render('Admin/Subscriptions/Index', [
             'plans' => $plans,
             'filters' => ['search' => $search->toString()],
@@ -66,6 +67,7 @@ class SubscriptionsController extends Controller
                 $featureValues[$def->key] = $v === null ? '' : (is_bool($v) ? ($v ? '1' : '0') : (string) $v);
             }
         }
+
         return Inertia::render('Admin/Subscriptions/Edit', [
             'plan' => $plan,
             'featureDefinitions' => $featureDefinitions,
@@ -97,12 +99,14 @@ class SubscriptionsController extends Controller
         }
 
         $plan->delete();
+
         return redirect()->route('admin.subscriptions.index')->with('success', 'Plan deleted successfully.');
     }
 
     public function toggle(Plan $plan): RedirectResponse
     {
         $plan->update(['is_active' => ! $plan->is_active]);
+
         return redirect()->route('admin.subscriptions.index')->with('success', $plan->is_active ? 'Plan activated.' : 'Plan deactivated.');
     }
 }

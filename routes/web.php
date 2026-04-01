@@ -16,8 +16,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     if (auth()->check()) {
         $role = auth()->user()->role ?? 'user';
+
         return redirect(in_array($role, ['admin', 'super_admin'], true) ? route('admin.dashboard') : '/dashboard');
     }
+
     return redirect()->route('login');
 });
 
@@ -85,5 +87,4 @@ Route::middleware(['auth', 'suspended', 'user'])->group(function () {
     require base_path('app/Modules/Project/Routes/project.php');
 });
 
-require __DIR__ . '/auth.php';
-
+require __DIR__.'/auth.php';

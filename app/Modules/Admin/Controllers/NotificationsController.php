@@ -20,7 +20,7 @@ class NotificationsController extends Controller
             $query->where('type', $request->type);
         }
         if ($request->filled('recipient')) {
-            $query->where('recipient', 'like', '%' . $request->recipient . '%');
+            $query->where('recipient', 'like', '%'.$request->recipient.'%');
         }
         if ($request->filled('date_from')) {
             $query->whereDate('sent_at', '>=', $request->date_from);

@@ -3,13 +3,13 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Plan;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 class UpgradePriceResolutionTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     public function test_plan_returns_stripe_price_id_from_plan_column_for_monthly(): void
     {

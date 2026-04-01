@@ -21,12 +21,12 @@ class EpisodeController extends Controller
         $nextNumber = (int) Episode::where('project_id', $project->id)->max('episode_number') + 1;
 
         $episode = Episode::create([
-            'project_id'        => $project->id,
-            'title'             => $request->input('title') ?: "Episode {$nextNumber}",
-            'episode_number'    => $nextNumber,
-            'summary'           => null,
-            'status'            => 'pending',
-            'total_credits_used'=> 0,
+            'project_id' => $project->id,
+            'title' => $request->input('title') ?: "Episode {$nextNumber}",
+            'episode_number' => $nextNumber,
+            'summary' => null,
+            'status' => 'pending',
+            'total_credits_used' => 0,
         ]);
 
         return redirect()->route('projects.show', $project)->with('success', 'Episode added.');

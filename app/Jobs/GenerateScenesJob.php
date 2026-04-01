@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\Character;
 use App\Models\Episode;
 use App\Models\Scene;
-use App\Jobs\MapSceneCharactersJob;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +20,9 @@ class GenerateScenesJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $episodeId;
+
     public $tries = 1;
+
     public $timeout = 300;
 
     /**
@@ -43,10 +44,11 @@ class GenerateScenesJob implements ShouldQueue
             // 🔴 ALWAYS RELOAD FRESH MODEL
             $episode = Episode::find($this->episodeId);
 
-            if (!$episode || !$episode->summary) {
+            if (! $episode || ! $episode->summary) {
                 Log::warning('Episode missing or empty summary', [
-                    'episode_id' => $this->episodeId
+                    'episode_id' => $this->episodeId,
                 ]);
+
                 return;
             }
 
@@ -68,12 +70,13 @@ class GenerateScenesJob implements ShouldQueue
             // Step 1: AI generate scenes (with locked face reference so descriptions stay consistent)
             $scenes = $ai->generateScenes($episode->summary, $lockedFaceReferences);
 
-            if (!is_array($scenes) || empty($scenes)) {
+            if (! is_array($scenes) || empty($scenes)) {
                 Log::warning('AI returned empty scenes', [
-                    'episode_id' => $episode->id
+                    'episode_id' => $episode->id,
                 ]);
 
                 $episode->update(['status' => 'scene_failed']);
+
                 return;
             }
 
@@ -86,6 +89,7 @@ class GenerateScenesJob implements ShouldQueue
                 Log::warning('GenerateScenesJob: episode was removed before saving scenes', [
                     'episode_id' => $this->episodeId,
                 ]);
+
                 return;
             }
             $episodeId = $episode->id;
@@ -95,12 +99,12 @@ class GenerateScenesJob implements ShouldQueue
                 collect($scenes)->filter(fn ($s) => ! empty($s['description'] ?? null))->chunk(20)->each(function ($chunk) use ($episodeId) {
                     foreach ($chunk as $scene) {
                         Scene::create([
-                            'episode_id'   => $episodeId,
-                            'title'        => $scene['title'] ?? null,
-                            'location'     => $scene['location'] ?? null,
-                            'time_of_day'  => $scene['time_of_day'] ?? null,
-                            'mood'         => $scene['mood'] ?? null,
-                            'description'  => $scene['description'],
+                            'episode_id' => $episodeId,
+                            'title' => $scene['title'] ?? null,
+                            'location' => $scene['location'] ?? null,
+                            'time_of_day' => $scene['time_of_day'] ?? null,
+                            'mood' => $scene['mood'] ?? null,
+                            'description' => $scene['description'],
                             'scene_number' => $scene['scene_number'] ?? 1,
                         ]);
                     }
@@ -110,6 +114,7 @@ class GenerateScenesJob implements ShouldQueue
                     Log::warning('GenerateScenesJob: episode no longer exists, skipping scene insert', [
                         'episode_id' => $this->episodeId,
                     ]);
+
                     return;
                 }
                 throw $e;
@@ -129,7 +134,7 @@ class GenerateScenesJob implements ShouldQueue
                         $project->user,
                         $project,
                         'Scenes generated',
-                        'Scenes for episode "' . ($episode->title ?: 'Episode ' . $episode->episode_number) . '" have been generated.'
+                        'Scenes for episode "'.($episode->title ?: 'Episode '.$episode->episode_number).'" have been generated.'
                     );
                 }
                 foreach ($episode->scenes as $scene) {

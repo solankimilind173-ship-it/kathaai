@@ -20,6 +20,7 @@ class Plan extends Model
         'max_reels_per_episode',
         'max_video_minutes',
         'allow_multiple_video_styles',
+        'allow_trailer_generation',
         'allow_4k',
         'allow_voice_style_selection',
         'allow_background_music',
@@ -62,18 +63,20 @@ class Plan extends Model
         $pf = $this->planFeatures()->whereHas('featureDefinition', fn ($q) => $q->where('key', $key))->first();
         if ($pf !== null) {
             $def = $pf->featureDefinition;
+
             return $this->castFeatureValue($pf->value, $def->type ?? 'string');
         }
         if (array_key_exists($key, $this->getAttributes())) {
             return $this->getAttributeFromArray($key);
         }
+
         return null;
     }
 
     public function getAttribute($key): mixed
     {
         $featureKeys = [
-            'voice_languages', 'max_export_resolution', 'allow_background_music', 'allow_intro_song_generation',
+            'voice_languages', 'max_export_resolution', 'allow_background_music', 'allow_intro_song_generation', 'allow_trailer_generation',
             'max_episodes_per_project', 'max_episodes_per_day', 'priority_rendering_queue', 'max_dubbing_languages', 'allow_4k',
             'allow_voice_style_selection', 'allow_multiple_video_styles', 'max_reels_per_episode',
             'max_video_minutes', 'max_projects',
@@ -84,6 +87,7 @@ class Plan extends Model
                 return $value;
             }
         }
+
         return parent::getAttribute($key);
     }
 
@@ -95,6 +99,7 @@ class Plan extends Model
         if ($interval === 'yearly') {
             return $this->stripe_yearly_price_id ?? config("services.stripe.plans.{$this->slug}.yearly");
         }
+
         return $this->stripe_price_id ?? config("services.stripe.plans.{$this->slug}.monthly");
     }
 

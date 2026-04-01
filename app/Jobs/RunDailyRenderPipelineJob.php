@@ -32,6 +32,7 @@ class RunDailyRenderPipelineJob implements ShouldQueue
 
         if (! $project) {
             Log::warning('RunDailyRenderPipelineJob: project not found', ['project_id' => $this->projectId]);
+
             return;
         }
 
@@ -43,10 +44,10 @@ class RunDailyRenderPipelineJob implements ShouldQueue
             Log::info('RunDailyRenderPipelineJob: project has no episodes, skipping auto render', [
                 'project_id' => $project->id,
             ]);
+
             return;
         }
 
         GenerateProjectSceneMediaJob::dispatch($project);
     }
 }
-

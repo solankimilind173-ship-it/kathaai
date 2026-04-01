@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ProjectStatus;
 use App\Enums\VideoFormat;
 use App\Models\Project;
+use App\Services\ElevenLabsService;
 use App\Services\OpenAIService;
 use App\Services\StartRenderService;
 use Illuminate\Bus\Queueable;
@@ -32,11 +33,12 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
         $this->projectId = $project->id;
     }
 
-    public function handle(OpenAIService $ai): void
+    public function handle(OpenAIService $ai, ElevenLabsService $elevenLabs): void
     {
-        $project = Project::with(['episodes.scenes'])->find($this->projectId);
+        $project = Project::with(['episodes.scenes.characters'])->find($this->projectId);
         if (! $project) {
             Log::warning('GenerateProjectSceneMediaJob: project not found', ['project_id' => $this->projectId]);
+
             return;
         }
 
@@ -48,6 +50,7 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
         if ($scenes->isEmpty()) {
             Log::info('GenerateProjectSceneMediaJob: no scenes to process', ['project_id' => $project->id]);
             $this->markReadyAndMaybeRender($project);
+
             return;
         }
 
@@ -65,15 +68,16 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
                     Log::warning('GenerateProjectSceneMediaJob: scene has no description, skipping media', [
                         'scene_id' => $scene->id,
                     ]);
+
                     continue;
                 }
 
-                $prefix = 'scene-' . $scene->id . '-' . Str::slug(substr($scene->title ?? 's', 0, 20)) . '-' . uniqid();
+                $prefix = 'scene-'.$scene->id.'-'.Str::slug(substr($scene->title ?? 's', 0, 20)).'-'.uniqid();
 
                 if ($needsImage) {
                     try {
-                        $imagePrompt = $this->buildSceneImagePrompt($scene);
-                        $path = $ai->generateSceneImage($imagePrompt, $prefix . '-img', $project->id);
+                        $imagePrompt = $this->buildSceneImagePrompt($scene, $project);
+                        $path = $ai->generateSceneImage($imagePrompt, $prefix.'-img', $project->id);
                         $this->updateScene($scene->id, ['image_url' => $path]);
                     } catch (Throwable $e) {
                         Log::warning('GenerateProjectSceneMediaJob: scene image failed', [
@@ -85,8 +89,24 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
 
                 if ($needsVoice) {
                     try {
-                        $path = $ai->generateSceneVoice($description, $prefix . '-voice', $project->id);
-                        $this->updateScene($scene->id, ['voice_url' => $path]);
+                        $voiceProvider = config('kathaai.voice_provider', 'openai');
+                        $useElevenLabs = $voiceProvider === 'elevenlabs' && $elevenLabs->isConfigured();
+                        if ($useElevenLabs) {
+                            try {
+                                $result = $elevenLabs->textToSpeechWithTiming($description, $prefix.'-voice', $project->id);
+                                $update = ['voice_url' => $result['audio_path']];
+                                if (! empty($result['caption_path'])) {
+                                    $update['caption_url'] = $result['caption_path'];
+                                }
+                                $this->updateScene($scene->id, $update);
+                            } catch (Throwable $e) {
+                                $path = $elevenLabs->textToSpeech($description, $prefix.'-voice', $project->id);
+                                $this->updateScene($scene->id, ['voice_url' => $path]);
+                            }
+                        } else {
+                            $path = $ai->generateSceneVoice($description, $prefix.'-voice', $project->id);
+                            $this->updateScene($scene->id, ['voice_url' => $path]);
+                        }
                     } catch (Throwable $e) {
                         Log::warning('GenerateProjectSceneMediaJob: scene voice failed', [
                             'scene_id' => $scene->id,
@@ -117,6 +137,7 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
                 Log::warning('GenerateProjectSceneMediaJob: project or scene no longer exists', [
                     'project_id' => $this->projectId,
                 ]);
+
                 return;
             }
             throw $e;
@@ -132,16 +153,40 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
         }
     }
 
-    private function buildSceneImagePrompt(\App\Models\Scene $scene): string
+    private function buildSceneImagePrompt(\App\Models\Scene $scene, Project $project): string
     {
+        $style = $this->getVideoTypeStylePrompt($project->video_type);
+
         $parts = array_filter([
+            $style,
             $scene->description,
             $scene->location ? "Location: {$scene->location}" : null,
             $scene->time_of_day ? "Time: {$scene->time_of_day}" : null,
             $scene->mood ? "Mood: {$scene->mood}" : null,
         ]);
+
         $prompt = implode('. ', $parts);
+
+        foreach ($scene->characters ?? [] as $character) {
+            $action = $character->pivot->action ?? null;
+            if (! empty(trim((string) $action))) {
+                $prompt .= ' Character '.$character->name.' is '.trim($action).'.';
+            }
+        }
+
         return mb_substr(trim($prompt), 0, 4000);
+    }
+
+    private function getVideoTypeStylePrompt(?string $videoTypeId): ?string
+    {
+        $types = config('video_types.types', []);
+        foreach ($types as $type) {
+            if (($type['id'] ?? null) === $videoTypeId && ! empty($type['description'] ?? null)) {
+                return 'Style: '.$type['description'];
+            }
+        }
+
+        return 'Style: Cinematic, film-like look with depth and mood.';
     }
 
     private function updateScene(int $sceneId, array $data): void

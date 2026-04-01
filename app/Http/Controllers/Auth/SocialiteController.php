@@ -8,8 +8,8 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
+use Laravel\Socialite\Facades\Socialite;
 
 class SocialiteController extends Controller
 {
@@ -28,7 +28,7 @@ class SocialiteController extends Controller
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Throwable $e) {
             return redirect()->route('login')
-                ->with('status', 'Could not sign in with ' . $provider . '. Please try again.');
+                ->with('status', 'Could not sign in with '.$provider.'. Please try again.');
         }
 
         $user = $this->findOrCreateUser($provider, $socialUser);
@@ -65,6 +65,7 @@ class SocialiteController extends Controller
             $user = User::where('email', $email)->first();
             if ($user) {
                 $user->update([$idColumn => $socialUser->getId()]);
+
                 return $user;
             }
         }
@@ -73,7 +74,7 @@ class SocialiteController extends Controller
 
         return User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? explode('@', $socialUser->getEmail() ?? 'user')[0] ?? 'User',
-            'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@' . $provider . '.oauth.local',
+            'email' => $socialUser->getEmail() ?? $socialUser->getId().'@'.$provider.'.oauth.local',
             'password' => bcrypt(Str::random(32)),
             $idColumn => $socialUser->getId(),
             'email_verified_at' => now(),

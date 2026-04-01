@@ -31,6 +31,7 @@ class UserSeeder extends Seeder
                 'plan_id' => $planId,
                 'credits' => $credits,
             ]);
+
             return;
         }
 

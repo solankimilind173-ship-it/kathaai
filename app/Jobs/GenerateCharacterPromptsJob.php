@@ -28,6 +28,7 @@ class GenerateCharacterPromptsJob implements ShouldQueue
         $project = Project::with('characters')->find($this->projectId);
         if (! $project) {
             Log::warning('GenerateCharacterPromptsJob: project no longer exists', ['project_id' => $this->projectId]);
+
             return;
         }
 
@@ -43,6 +44,7 @@ class GenerateCharacterPromptsJob implements ShouldQueue
                     Log::warning('GenerateCharacterPromptsJob: character or project no longer exists', [
                         'project_id' => $this->projectId,
                     ]);
+
                     return;
                 }
                 throw $e;

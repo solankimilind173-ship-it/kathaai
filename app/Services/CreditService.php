@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Exceptions\InsufficientCreditsException;
-use App\Services\ProjectAnalyticsService;
 use App\Models\CreditTransaction;
 use App\Models\Project;
 use App\Models\Scene;
@@ -18,6 +17,7 @@ class CreditService
      *
      * @param  int  $credits  Positive amount to deduct
      * @param  Scene|null  $scene  If set, also increment scene.credits_used
+     *
      * @throws InsufficientCreditsException
      */
     public function deduct(User $user, Project $project, int $credits, string $actionType, ?Scene $scene = null): void

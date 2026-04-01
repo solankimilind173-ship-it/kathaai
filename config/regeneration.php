@@ -10,5 +10,5 @@ return [
     */
     'max_scene_image_per_scene_per_day' => (int) env('REGENERATION_MAX_SCENE_IMAGE_PER_SCENE_PER_DAY', 10),
     'max_scene_voice_per_scene_per_day' => (int) env('REGENERATION_MAX_SCENE_VOICE_PER_SCENE_PER_DAY', 10),
-    'max_episode_per_project_per_day'   => (int) env('REGENERATION_MAX_EPISODE_PER_PROJECT_PER_DAY', 5),
+    'max_episode_per_project_per_day' => (int) env('REGENERATION_MAX_EPISODE_PER_PROJECT_PER_DAY', 5),
 ];

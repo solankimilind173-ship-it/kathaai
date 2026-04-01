@@ -18,12 +18,13 @@ class TwoFactorChallengeController extends Controller
     public function create(Request $request): Response|RedirectResponse
     {
         $userId = $request->session()->get('two_factor.user_id');
-        if (!$userId) {
+        if (! $userId) {
             return redirect()->route('login');
         }
         $user = User::find($userId);
-        if (!$user) {
+        if (! $user) {
             $request->session()->forget('two_factor.user_id');
+
             return redirect()->route('login');
         }
 
@@ -37,12 +38,12 @@ class TwoFactorChallengeController extends Controller
         $request->validate(['code' => ['required', 'string']]);
 
         $userId = $request->session()->get('two_factor.user_id');
-        if (!$userId) {
+        if (! $userId) {
             throw ValidationException::withMessages(['code' => ['Session expired. Please log in again.']]);
         }
 
         $user = User::find($userId);
-        if (!$user || !$twoFactor->confirmTwoFactor($user, $request->string('code')->toString())) {
+        if (! $user || ! $twoFactor->confirmTwoFactor($user, $request->string('code')->toString())) {
             throw ValidationException::withMessages(['code' => ['The provided code was invalid.']]);
         }
 
@@ -56,6 +57,7 @@ class TwoFactorChallengeController extends Controller
         if (in_array($role, ['admin', 'super_admin'], true)) {
             return redirect()->intended(route('admin.dashboard', absolute: false));
         }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 }

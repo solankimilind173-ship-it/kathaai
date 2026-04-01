@@ -24,6 +24,7 @@ class VideoMetadataService
 
         try {
             $result = $this->openAI->generateVideoMetadata($title, $summary);
+
             return [
                 'title' => $result['title'] ?? $title,
                 'description' => $result['description'] ?? $this->fallbackDescription($title, $summary),
@@ -44,24 +45,27 @@ class VideoMetadataService
         if ($episodes->isEmpty()) {
             return '';
         }
-        return $episodes->map(fn ($ep) => ($ep->title ?: 'Episode') . ': ' . ($ep->summary ?? ''))->implode("\n");
+
+        return $episodes->map(fn ($ep) => ($ep->title ?: 'Episode').': '.($ep->summary ?? ''))->implode("\n");
     }
 
     private function fallbackDescription(string $title, string $summary): string
     {
         $intro = "Watch \"{$title}\" — a story brought to life with AI-powered video.";
         if ($summary !== '') {
-            $intro .= "\n\n" . \Illuminate\Support\Str::limit($summary, 300);
+            $intro .= "\n\n".\Illuminate\Support\Str::limit($summary, 300);
         }
-        return $intro . "\n\nCreated with KathaAI.";
+
+        return $intro."\n\nCreated with KathaAI.";
     }
 
     private function fallbackHashtags(string $title): string
     {
         $words = preg_split('/\s+/', trim($title), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $base = array_unique(array_map(fn ($w) => '#' . preg_replace('/[^a-zA-Z0-9]/', '', $w), $words));
+        $base = array_unique(array_map(fn ($w) => '#'.preg_replace('/[^a-zA-Z0-9]/', '', $w), $words));
         $defaults = ['#KathaAI', '#AIStory', '#Storytelling', '#ShortFilm', '#Video'];
         $combined = array_slice(array_merge($base, $defaults), 0, self::HASHTAG_COUNT);
+
         return implode(' ', $combined);
     }
 
@@ -76,7 +80,7 @@ class VideoMetadataService
             if ($tag === '') {
                 continue;
             }
-            $tag = str_starts_with($tag, '#') ? $tag : '#' . $tag;
+            $tag = str_starts_with($tag, '#') ? $tag : '#'.$tag;
             $normalized[] = preg_replace('/[^\p{L}\p{N}_#]/u', '', $tag) ?: $tag;
         }
         $fill = self::HASHTAG_COUNT - count($normalized);
@@ -91,6 +95,7 @@ class VideoMetadataService
                 }
             }
         }
+
         return implode(' ', array_slice($normalized, 0, self::HASHTAG_COUNT));
     }
 }

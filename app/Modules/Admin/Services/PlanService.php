@@ -19,6 +19,7 @@ class PlanService
     {
         return ! User::where('plan_id', $plan->id)->exists();
     }
+
     /**
      * Sync plan_features from form (object or array). Removes features not in payload.
      */

@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Services\FfmpegPathResolver;
 use App\Services\VideoWatermarkService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Process;
@@ -9,17 +10,19 @@ use Tests\TestCase;
 
 class VideoWatermarkServiceTest extends TestCase
 {
-    private VideoWatermarkService $service;
-
     protected function setUp(): void
     {
         parent::setUp();
+        FfmpegPathResolver::clearCache();
+        Process::fake([
+            'ffmpeg' => Process::result('ffmpeg version 4.4', '', 0),
+        ]);
         $this->service = new VideoWatermarkService;
     }
 
     public function test_apply_watermark_returns_null_when_logo_file_missing(): void
     {
-        Config::set('watermark.logo_path', __DIR__ . '/nonexistent-logo.png');
+        Config::set('watermark.logo_path', __DIR__.'/nonexistent-logo.png');
         $result = $this->service->applyWatermark('/tmp/input.mp4');
         $this->assertNull($result);
     }
@@ -32,7 +35,7 @@ class VideoWatermarkServiceTest extends TestCase
         }
         Config::set('watermark.logo_path', $logo);
         Process::fake([
-            '*' => Process::result('', 'FFmpeg error', 1),
+            'ffmpeg' => Process::result('', 'FFmpeg error', 1),
         ]);
         $result = $this->service->applyWatermark('/tmp/input.mp4');
         $this->assertNull($result);

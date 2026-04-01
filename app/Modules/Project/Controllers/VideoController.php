@@ -68,7 +68,7 @@ class VideoController extends Controller
             }
 
             $filename = $renderLog->video_title
-                ? \Illuminate\Support\Str::slug($renderLog->video_title) . '.mp4'
+                ? \Illuminate\Support\Str::slug($renderLog->video_title).'.mp4'
                 : "video-{$renderLog->id}.mp4";
 
             $fullPath = Storage::disk('public')->path($path);

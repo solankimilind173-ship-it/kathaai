@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Project;
 use App\Models\Character;
+use App\Models\Project;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,6 +29,7 @@ class ExtractCharactersJob implements ShouldQueue
         $project = Project::find($this->projectId);
         if (! $project) {
             Log::warning('ExtractCharactersJob: project no longer exists', ['project_id' => $this->projectId]);
+
             return;
         }
 
@@ -48,6 +49,7 @@ class ExtractCharactersJob implements ShouldQueue
             Log::warning('ExtractCharactersJob: project was removed before creating characters', [
                 'project_id' => $this->projectId,
             ]);
+
             return;
         }
 
@@ -64,6 +66,7 @@ class ExtractCharactersJob implements ShouldQueue
                 Log::warning('ExtractCharactersJob: project no longer exists, skipping character create', [
                     'project_id' => $this->projectId,
                 ]);
+
                 return;
             }
             throw $e;

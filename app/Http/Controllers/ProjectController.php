@@ -36,7 +36,7 @@ class ProjectController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+            $query->where('title', 'like', '%'.$request->search.'%');
         }
 
         if ($request->filled('status') && in_array($request->status, ProjectStatus::values(), true)) {
@@ -275,7 +275,7 @@ class ProjectController extends Controller
 
         if (! $creditService->hasEnoughForSceneGeneration($user)) {
             return back()->withErrors([
-                'credits' => 'Insufficient credits for scene generation. Required: ' . $creditService->sceneGenerationCost() . ', available: ' . $user->credits . '.',
+                'credits' => 'Insufficient credits for scene generation. Required: '.$creditService->sceneGenerationCost().', available: '.$user->credits.'.',
             ])->withInput();
         }
 
@@ -333,7 +333,7 @@ class ProjectController extends Controller
             $clone = Project::create([
                 'user_id' => $user->id,
                 'book_id' => $project->book_id,
-                'title' => $project->title . ' (Copy)',
+                'title' => $project->title.' (Copy)',
                 'description' => $project->description,
                 'story_source' => $project->story_source,
                 'source_type' => $project->source_type,
@@ -435,12 +435,14 @@ class ProjectController extends Controller
     public function archive(Project $project)
     {
         $project->update(['is_archived' => true]);
+
         return redirect()->route('projects.index')->with('success', 'Project archived.');
     }
 
     public function restore(Project $project)
     {
         $project->update(['is_archived' => false]);
+
         return redirect()->route('projects.index')->with('success', 'Project restored.');
     }
 
@@ -472,6 +474,7 @@ class ProjectController extends Controller
     public function destroy(Project $project)
     {
         $project->delete();
+
         return redirect()->route('projects.index')->with('success', 'Project deleted.');
     }
 }

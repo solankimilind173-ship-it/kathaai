@@ -34,6 +34,7 @@ class RegenerateSceneImageJob implements ShouldQueue
         $scene = Scene::with('episode')->find($this->sceneId);
         if (! $scene || ! $scene->episode) {
             Log::warning('RegenerateSceneImageJob: scene or episode missing', ['scene_id' => $this->sceneId]);
+
             return;
         }
 
@@ -43,6 +44,7 @@ class RegenerateSceneImageJob implements ShouldQueue
             if (Scene::where('id', $this->sceneId)->exists()) {
                 Scene::where('id', $this->sceneId)->update(['status' => 'image_failed']);
             }
+
             return;
         }
 
@@ -50,7 +52,7 @@ class RegenerateSceneImageJob implements ShouldQueue
             $scene->update(['status' => 'regenerating_image']);
             $projectId = $scene->episode->project_id;
             $prompt = $this->buildSceneImagePrompt($scene);
-            $filename = 'regen-scene-' . $scene->id . '-' . Str::slug(substr($scene->title ?? 's', 0, 20)) . '-' . uniqid();
+            $filename = 'regen-scene-'.$scene->id.'-'.Str::slug(substr($scene->title ?? 's', 0, 20)).'-'.uniqid();
             $path = $ai->generateSceneImage($prompt, $filename, $projectId);
             $scene->update([
                 'image_url' => $path,
@@ -60,6 +62,7 @@ class RegenerateSceneImageJob implements ShouldQueue
         } catch (QueryException $e) {
             if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'foreign key constraint')) {
                 Log::warning('RegenerateSceneImageJob: scene no longer exists', ['scene_id' => $this->sceneId]);
+
                 return;
             }
             throw $e;
@@ -84,6 +87,7 @@ class RegenerateSceneImageJob implements ShouldQueue
             $scene->mood ? "Mood: {$scene->mood}" : null,
         ]);
         $prompt = implode('. ', $parts);
+
         return mb_substr(trim($prompt), 0, 4000);
     }
 }

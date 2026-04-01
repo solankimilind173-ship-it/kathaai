@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Project;
 use App\Models\Episode;
+use App\Models\Project;
 use App\Services\EpisodeGenerationLimitService;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
@@ -43,6 +43,7 @@ class GenerateEpisodesJob implements ShouldQueue
         $project = Project::find($this->projectId);
         if (! $project) {
             Log::warning('GenerateEpisodesJob: project no longer exists', ['project_id' => $this->projectId]);
+
             return;
         }
 
@@ -64,6 +65,7 @@ class GenerateEpisodesJob implements ShouldQueue
                 'Daily limit reached',
                 $limitService->limitReachedMessage($user)
             );
+
             return;
         }
 
@@ -81,6 +83,7 @@ class GenerateEpisodesJob implements ShouldQueue
             $project = Project::find($this->projectId);
             if (! $project) {
                 Log::warning('GenerateEpisodesJob: project was removed before creating episodes', ['project_id' => $this->projectId]);
+
                 return;
             }
 
@@ -89,11 +92,11 @@ class GenerateEpisodesJob implements ShouldQueue
             foreach ($episodesToCreate as $ep) {
                 try {
                     $episode = Episode::create([
-                        'project_id'        => $project->id,
-                        'title'             => $ep['title'],
-                        'episode_number'    => $episodeNumber++,
-                        'summary'           => $ep['summary'],
-                        'status'            => 'episode_generated',
+                        'project_id' => $project->id,
+                        'title' => $ep['title'],
+                        'episode_number' => $episodeNumber++,
+                        'summary' => $ep['summary'],
+                        'status' => 'episode_generated',
                     ]);
                     GenerateScenesJob::dispatch($episode);
                 } catch (QueryException $e) {
@@ -101,6 +104,7 @@ class GenerateEpisodesJob implements ShouldQueue
                         Log::warning('GenerateEpisodesJob: project no longer exists, skipping episode create', [
                             'project_id' => $this->projectId,
                         ]);
+
                         return;
                     }
                     throw $e;
@@ -113,7 +117,7 @@ class GenerateEpisodesJob implements ShouldQueue
                 : 'Daily episode generation limit reached. Try again tomorrow or upgrade your plan.';
 
             if ($createdCount > 0 && $createdCount < count($episodes)) {
-                $message .= ' Your plan allows ' . $limitService->maxEpisodesPerDay($user) . ' episode(s) per day.';
+                $message .= ' Your plan allows '.$limitService->maxEpisodesPerDay($user).' episode(s) per day.';
             }
 
             app(\App\Services\NotificationService::class)->sendProjectStepCompleted(

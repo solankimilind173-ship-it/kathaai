@@ -14,6 +14,7 @@ class RegenerationLimitService
     {
         $limit = config('regeneration.max_scene_image_per_scene_per_day', 10);
         $key = $this->sceneImageKey($scene);
+
         return (int) Cache::get($key, 0) < $limit;
     }
 
@@ -27,6 +28,7 @@ class RegenerationLimitService
     {
         $limit = config('regeneration.max_scene_voice_per_scene_per_day', 10);
         $key = $this->sceneVoiceKey($scene);
+
         return (int) Cache::get($key, 0) < $limit;
     }
 
@@ -40,6 +42,7 @@ class RegenerationLimitService
     {
         $limit = config('regeneration.max_episode_per_project_per_day', 5);
         $key = $this->episodeKey($episode);
+
         return (int) Cache::get($key, 0) < $limit;
     }
 
@@ -62,12 +65,14 @@ class RegenerationLimitService
     private function sceneImageKey(Scene $scene): string
     {
         $date = now()->format('Y-m-d');
+
         return "regeneration:scene_image:{$scene->id}:{$date}";
     }
 
     private function sceneVoiceKey(Scene $scene): string
     {
         $date = now()->format('Y-m-d');
+
         return "regeneration:scene_voice:{$scene->id}:{$date}";
     }
 
@@ -75,6 +80,7 @@ class RegenerationLimitService
     {
         $projectId = $episode->project_id ?? $episode->project?->id;
         $date = now()->format('Y-m-d');
+
         return "regeneration:episode:{$projectId}:{$date}";
     }
 

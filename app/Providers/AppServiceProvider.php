@@ -32,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
             if (! $project || $project->user_id !== auth()->id()) {
                 abort(404);
             }
+
             return $project;
         });
 

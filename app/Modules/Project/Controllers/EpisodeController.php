@@ -38,6 +38,7 @@ class EpisodeController extends Controller
         }
         $project = $episode->project;
         $episode->delete();
+
         return redirect()->route('projects.show', $project)->with('success', 'Episode deleted.');
     }
 
@@ -58,6 +59,7 @@ class EpisodeController extends Controller
         Scene::where('episode_id', $episode->id)->delete();
         $episode->update(['status' => 'generating_scenes']);
         GenerateScenesJob::dispatch($episode);
+
         return redirect()->route('projects.show', $episode->project)->with('success', 'Episode regeneration started.');
     }
 
@@ -75,6 +77,7 @@ class EpisodeController extends Controller
         }
         $episode->update(['status' => 'generating_scenes']);
         GenerateScenesJob::dispatch($episode);
+
         return redirect()->route('projects.show', $episode->project)->with('success', 'Scene generation has been queued for retry.');
     }
 
@@ -89,6 +92,7 @@ class EpisodeController extends Controller
                 'episode_number' => $position + 1,
             ]);
         }
+
         return redirect()->route('projects.show', $project)->with('success', 'Episodes reordered.');
     }
 }

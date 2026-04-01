@@ -25,6 +25,7 @@ export default function RenderModal({
         fps: project?.default_fps ?? 24,
         subtitle_style: project?.default_subtitle_style ?? 'default',
         background_music: !!project?.background_music,
+        trailer: false,
     });
     const [estimate, setEstimate] = useState({ cost: 0, duration_minutes: 0, user_credits: userCredits });
     const [loading, setLoading] = useState(false);
@@ -60,6 +61,7 @@ export default function RenderModal({
             fps: project.default_fps ?? 24,
             subtitle_style: project.default_subtitle_style ?? 'default',
             background_music: !!project.background_music,
+            trailer: false,
         });
     }, [open, project]);
 
@@ -161,6 +163,19 @@ export default function RenderModal({
                     />
                     <InputLabel value="Add background music" htmlFor="render-bg-music" className="!mt-0" />
                 </div>
+
+                {plan?.allow_trailer_generation && (
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="render-trailer"
+                            checked={settings.trailer}
+                            onChange={(e) => setSettings((s) => ({ ...s, trailer: e.target.checked }))}
+                            className="rounded border-gray-300"
+                        />
+                        <InputLabel value="Generate trailer (first 60 seconds)" htmlFor="render-trailer" className="!mt-0" />
+                    </div>
+                )}
 
                 {loading ? (
                     <p className="text-sm text-gray-500">Calculating cost…</p>

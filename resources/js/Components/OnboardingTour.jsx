@@ -80,9 +80,20 @@ export default function OnboardingTour({ open, steps = [], onClose, onFinish, on
             ? { top: position.top, left: position.left }
             : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
 
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget && onClose) {
+            onClose();
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-40">
-            <div className="absolute inset-0 bg-black/40" aria-hidden />
+            <button
+                type="button"
+                className="absolute inset-0 bg-black/40 cursor-pointer"
+                aria-label="Close tour"
+                onClick={handleBackdropClick}
+            />
             <div
                 className="absolute max-w-sm rounded-lg bg-white p-4 shadow-xl ring-1 ring-black/10"
                 style={style}

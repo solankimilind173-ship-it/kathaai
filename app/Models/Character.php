@@ -54,6 +54,7 @@ class Character extends Model
         if (str_starts_with($path, 'http')) {
             return $path;
         }
+
         return Storage::disk('public')->url($path);
     }
 
@@ -72,6 +73,7 @@ class Character extends Model
         if (! empty($this->image_path)) {
             return $this->image_path;
         }
+
         return null;
     }
 

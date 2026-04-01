@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\VideoFormat;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -42,6 +41,7 @@ class RenderLog extends Model
         if ($value === null || $value === '') {
             return null;
         }
+
         return match ($value) {
             'instagram_reels' => 'Instagram Reels',
             'youtube' => 'YouTube',

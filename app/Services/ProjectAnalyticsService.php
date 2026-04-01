@@ -26,7 +26,7 @@ class ProjectAnalyticsService
      */
     public function getAnalytics(Project $project): array
     {
-        $key = self::CACHE_KEY_PREFIX . $project->id;
+        $key = self::CACHE_KEY_PREFIX.$project->id;
 
         return Cache::remember($key, self::CACHE_TTL_SECONDS, function () use ($project) {
             return $this->computeAnalytics($project);
@@ -38,7 +38,7 @@ class ProjectAnalyticsService
      */
     public static function invalidateCache(Project $project): void
     {
-        Cache::forget(self::CACHE_KEY_PREFIX . $project->id);
+        Cache::forget(self::CACHE_KEY_PREFIX.$project->id);
     }
 
     private function computeAnalytics(Project $project): array
@@ -144,6 +144,7 @@ class ProjectAnalyticsService
         if ($seconds < 3600) {
             $m = (int) floor($seconds / 60);
             $s = $seconds % 60;
+
             return $s > 0 ? "{$m}m {$s}s" : "{$m}m";
         }
         $h = (int) floor($seconds / 3600);
@@ -156,6 +157,7 @@ class ProjectAnalyticsService
         if ($s > 0) {
             $parts[] = "{$s}s";
         }
+
         return implode(' ', $parts);
     }
 

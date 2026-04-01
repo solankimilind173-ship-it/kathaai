@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Scene;
 use App\Models\Character;
+use App\Models\Scene;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -42,11 +42,13 @@ class MapSceneCharactersJob implements ShouldQueue
             Log::warning('MapSceneCharactersJob: scene or episode missing', [
                 'scene_id' => $this->sceneId,
             ]);
+
             return;
         }
 
         if (empty(trim($scene->description ?? ''))) {
             Log::warning('Scene missing description', ['scene_id' => $this->sceneId]);
+
             return;
         }
 
@@ -57,6 +59,7 @@ class MapSceneCharactersJob implements ShouldQueue
 
         if ($characters->isEmpty()) {
             Log::warning('No characters found for scene', ['scene_id' => $this->sceneId]);
+
             return;
         }
 
@@ -75,6 +78,7 @@ class MapSceneCharactersJob implements ShouldQueue
                 'scene_id' => $this->sceneId,
                 'response' => $results,
             ]);
+
             return;
         }
 
@@ -111,6 +115,7 @@ class MapSceneCharactersJob implements ShouldQueue
                 Log::warning('MapSceneCharactersJob: scene or related record no longer exists', [
                     'scene_id' => $this->sceneId,
                 ]);
+
                 return;
             }
             throw $e;

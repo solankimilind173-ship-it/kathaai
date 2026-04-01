@@ -4,13 +4,13 @@ namespace Tests\Unit\Services;
 
 use App\Models\User;
 use App\Services\TwoFactorService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 class TwoFactorServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private TwoFactorService $service;
 

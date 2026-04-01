@@ -35,7 +35,7 @@ export default function AdminNotificationsIndex({ notifications, filters, typeOp
             label: 'Project',
             render: (row) =>
                 row.project_id
-                    ? (row.project ? <Link href={route('admin.projects.show', row.project)} className="text-amber-600 hover:text-amber-700">{row.project.title}</Link> : `#${row.project_id}`)
+                    ? (row.project ? <Link href={route('admin.projects.show', { project: row.project.id })} className="text-amber-600 hover:text-amber-700">{row.project.title}</Link> : `#${row.project_id}`)
                     : '—',
         },
         {

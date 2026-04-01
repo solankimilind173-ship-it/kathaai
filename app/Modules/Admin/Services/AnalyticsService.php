@@ -34,6 +34,7 @@ class AnalyticsService
         if ($filter === 'custom' && $dateFrom && $dateTo) {
             return [Carbon::parse($dateFrom)->startOfDay(), Carbon::parse($dateTo)->endOfDay()];
         }
+
         return [null, null];
     }
 
@@ -100,7 +101,7 @@ class AnalyticsService
      */
     private function getDashboardMetricsBatch(Carbon $from, Carbon $to): array
     {
-        $adminRoles = "'" . implode("','", User::ADMIN_ROLES) . "'";
+        $adminRoles = "'".implode("','", User::ADMIN_ROLES)."'";
         $row = DB::selectOne(
             "SELECT
                 (SELECT COUNT(*) FROM users WHERE role NOT IN ({$adminRoles}) AND created_at >= ? AND created_at <= ?) AS total_users,
@@ -129,6 +130,7 @@ class AnalyticsService
         $days = $from->diffInDays($to);
         $groupByDay = $days <= 31;
         $dateFormat = $groupByDay ? '%Y-%m-%d' : '%Y-%m';
+
         return [
             'revenue' => $this->chartRevenue($from, $to, $dateFormat, $groupByDay),
             'user_registrations' => $this->chartUserRegistrations($from, $to, $dateFormat, $groupByDay),
@@ -146,6 +148,7 @@ class AnalyticsService
         $days = $from->diffInDays($to);
         $groupByDay = $days <= 31;
         $dateFormat = $groupByDay ? '%Y-%m-%d' : '%Y-%m';
+
         return [
             'revenue_over_time' => $this->chartRevenue($from, $to, $dateFormat, $groupByDay),
             'credits_consumption_per_feature' => $this->creditsConsumptionByFeature($from, $to),
@@ -170,6 +173,7 @@ class AnalyticsService
             ->groupBy('period')
             ->orderBy('period')
             ->get();
+
         return $rows->map(fn ($r) => ['period' => $r->period, 'total' => round((float) $r->total, 2)])->values()->all();
     }
 
@@ -186,6 +190,7 @@ class AnalyticsService
             ->groupBy('period')
             ->orderBy('period')
             ->get();
+
         return $rows->map(fn ($r) => ['period' => $r->period, 'count' => (int) $r->count])->values()->all();
     }
 
@@ -203,6 +208,7 @@ class AnalyticsService
             ->groupBy('period')
             ->orderBy('period')
             ->get();
+
         return $rows->map(fn ($r) => ['period' => $r->period, 'total' => (int) $r->total])->values()->all();
     }
 
@@ -219,6 +225,7 @@ class AnalyticsService
             ->groupBy('period')
             ->orderBy('period')
             ->get();
+
         return $rows->map(fn ($r) => ['period' => $r->period, 'count' => (int) $r->count])->values()->all();
     }
 
@@ -234,6 +241,7 @@ class AnalyticsService
         if ($to !== null) {
             $query->where('created_at', '<=', $to);
         }
+
         return $query->orderByDesc('total')->get()->map(fn ($r) => [
             'feature' => $r->feature_key === 'other' ? 'Other' : $r->feature_key,
             'total' => (int) $r->total,
@@ -253,6 +261,7 @@ class AnalyticsService
         if ($to !== null) {
             $query->where('projects.created_at', '<=', $to);
         }
+
         return $query->orderByDesc('count')->limit(15)->get()->map(fn ($r) => [
             'language' => $r->language_name,
             'count' => (int) $r->count,
@@ -270,6 +279,7 @@ class AnalyticsService
         if ($to !== null) {
             $query->where('created_at', '<=', $to);
         }
+
         return $query->orderByDesc('count')->get()->map(fn ($r) => [
             'style' => $r->quality_key === 'default' ? 'Not set' : $r->quality_key,
             'count' => (int) $r->count,
@@ -302,6 +312,7 @@ class AnalyticsService
             return [];
         }
         $users = User::whereIn('id', $activity->keys())->get()->keyBy('id');
+
         return $activity->map(fn ($count, $id) => [
             'user_id' => $id,
             'name' => $users->get($id)?->name ?? '—',
@@ -332,6 +343,7 @@ class AnalyticsService
             $usersWithPlanQuery->where('updated_at', '>=', $from)->where('updated_at', '<=', $to);
         }
         $usersWithPlan = $usersWithPlanQuery->count();
+
         return [
             'new_subscriptions_per_plan' => $perPlan,
             'total_new_subscriptions' => $totalNewSubscriptions,

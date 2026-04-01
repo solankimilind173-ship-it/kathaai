@@ -136,6 +136,7 @@ class RenderController extends Controller
         $projectId = $project->id;
         $totalSeconds = $project->scenes()->get()->sum(function ($scene) use ($projectId) {
             $settings = $scene->sceneRenderSettings()->where('project_id', $projectId)->first();
+
             return $settings?->duration_trimmed ?? $scene->duration ?? 0;
         });
 

@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson()) {
                 return response()->json(['message' => $e->getMessage(), 'required' => $e->required, 'available' => $e->available], 402);
             }
+
             return redirect()->back()->withErrors(['credits' => $e->getMessage()])->withInput();
         });
     })

@@ -2,8 +2,4 @@
 
 namespace App\Modules\Admin\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-
-class UpdatePlanRequest extends StorePlanRequest
-{
-}
+class UpdatePlanRequest extends StorePlanRequest {}

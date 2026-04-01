@@ -28,7 +28,7 @@ return new class extends Migration
             $existingIndexes = DB::select('SHOW INDEX FROM projects');
             $existingNames = array_unique(array_column($existingIndexes, 'Key_name'));
         } elseif ($driver === 'sqlite') {
-            $existingIndexes = DB::select("PRAGMA index_list(projects)");
+            $existingIndexes = DB::select('PRAGMA index_list(projects)');
             $existingNames = array_column($existingIndexes, 'name');
         }
 

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\User;
-use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Crypt;
@@ -16,6 +16,7 @@ class TwoFactorService
     public function generateSecret(): string
     {
         $google2fa = new Google2FA;
+
         return $google2fa->generateSecretKey(32);
     }
 
@@ -30,12 +31,14 @@ class TwoFactorService
             new SvgImageBackEnd
         );
         $writer = new Writer($renderer);
+
         return $writer->writeString($qrCodeUrl);
     }
 
     public function verifyCode(string $secret, string $code): bool
     {
         $google2fa = new Google2FA;
+
         return $google2fa->verifyKey($secret, $code);
     }
 
@@ -43,14 +46,15 @@ class TwoFactorService
     {
         $codes = [];
         for ($i = 0; $i < $count; $i++) {
-            $codes[] = Str::random(10) . '-' . Str::random(10);
+            $codes[] = Str::random(10).'-'.Str::random(10);
         }
+
         return $codes;
     }
 
     public function enableTwoFactor(User $user, string $secret, string $code, array $recoveryCodes): bool
     {
-        if (!$this->verifyCode($secret, $code)) {
+        if (! $this->verifyCode($secret, $code)) {
             return false;
         }
 
@@ -75,7 +79,7 @@ class TwoFactorService
     public function confirmTwoFactor(User $user, string $code): bool
     {
         $secret = $user->two_factor_secret ? Crypt::decryptString($user->two_factor_secret) : null;
-        if (!$secret) {
+        if (! $secret) {
             return false;
         }
         if ($this->verifyCode($secret, $code)) {
@@ -87,13 +91,15 @@ class TwoFactorService
             $user->forceFill([
                 'two_factor_recovery_codes' => Crypt::encryptString(json_encode($recoveryCodes)),
             ])->save();
+
             return true;
         }
+
         return false;
     }
 
     public function hasEnabledTwoFactor(User $user): bool
     {
-        return !empty($user->two_factor_confirmed_at) && !empty($user->two_factor_secret);
+        return ! empty($user->two_factor_confirmed_at) && ! empty($user->two_factor_secret);
     }
 }

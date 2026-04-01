@@ -15,7 +15,7 @@ use Laravel\Cashier\Billable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, Billable;
+    use Billable, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -42,18 +42,21 @@ class User extends Authenticatable
 
     /** Default notification preferences (when not set). */
     public const PREF_EMAIL_WELCOME = 'email_welcome';
+
     public const PREF_EMAIL_PASSWORD_CHANGED = 'email_password_changed';
+
     public const PREF_EMAIL_PROJECT_STEP = 'email_project_step';
 
     public function getPreference(string $key, mixed $default = true): mixed
     {
         $prefs = $this->preferences ?? [];
+
         return array_key_exists($key, $prefs) ? $prefs[$key] : $default;
     }
 
     public function hasTwoFactorEnabled(): bool
     {
-        return !empty($this->two_factor_confirmed_at);
+        return ! empty($this->two_factor_confirmed_at);
     }
 
     /** Role values that are considered platform admins (excluded from user-only analytics). */

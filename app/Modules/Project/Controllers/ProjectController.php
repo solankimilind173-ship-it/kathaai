@@ -40,7 +40,7 @@ class ProjectController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+            $query->where('title', 'like', '%'.$request->search.'%');
         }
 
         if ($request->filled('status') && in_array($request->status, ProjectStatus::values(), true)) {
@@ -168,6 +168,7 @@ class ProjectController extends Controller
         } else {
             $shareUrl = null;
         }
+
         return back()->with(['shareUrl' => $shareUrl]);
     }
 
@@ -196,10 +197,11 @@ class ProjectController extends Controller
                 'max_dubbing_languages' => $plan->max_dubbing_languages ?? 1,
                 'max_video_minutes' => $plan->max_video_minutes ?? 5,
                 'max_reels_per_episode' => $plan->max_reels_per_episode ?? 1,
+                'allow_trailer_generation' => $plan->allow_trailer_generation ?? false,
                 'allow_4k' => $plan->allow_4k ?? false,
                 'max_episodes_per_day' => $episodeLimitService->maxEpisodesPerDay($user),
             ]
-            : ['max_dubbing_languages' => 1, 'max_video_minutes' => 5, 'max_reels_per_episode' => 1, 'allow_4k' => false, 'max_episodes_per_day' => 1];
+            : ['max_dubbing_languages' => 1, 'max_video_minutes' => 5, 'max_reels_per_episode' => 1, 'allow_trailer_generation' => false, 'allow_4k' => false, 'max_episodes_per_day' => 1];
 
         $videoFrames = config('video_types.frames', []);
         $videoTypes = VideoStyle::orderBy('name')->get()->map(function (VideoStyle $style) {
@@ -238,7 +240,7 @@ class ProjectController extends Controller
             'title' => 'required|string|max:255',
             'book_id' => 'required_if:source_type,library|nullable|exists:books,id',
             'story' => 'nullable|string|max:50000',
-            'story_file' => 'nullable|file|max:' . (StoryFileExtractor::MAX_FILE_SIZE_MB * 1024) . '|mimes:pdf,doc,docx',
+            'story_file' => 'nullable|file|max:'.(StoryFileExtractor::MAX_FILE_SIZE_MB * 1024).'|mimes:pdf,doc,docx',
             'language_id' => 'nullable|exists:languages,id',
             'dub_languages' => 'nullable|array',
             'dub_languages.*' => 'exists:languages,id',
@@ -321,7 +323,7 @@ class ProjectController extends Controller
         }
         if (! $creditService->hasEnoughForSceneGeneration($user)) {
             return back()->withErrors([
-                'credits' => 'Insufficient credits for scene generation. Required: ' . $creditService->sceneGenerationCost() . ', available: ' . $user->credits . '.',
+                'credits' => 'Insufficient credits for scene generation. Required: '.$creditService->sceneGenerationCost().', available: '.$user->credits.'.',
             ])->withInput();
         }
 
@@ -386,7 +388,7 @@ class ProjectController extends Controller
             $clone = Project::create([
                 'user_id' => $user->id,
                 'book_id' => $project->book_id,
-                'title' => $project->title . ' (Copy)',
+                'title' => $project->title.' (Copy)',
                 'description' => $project->description,
                 'story_source' => $project->story_source,
                 'source_type' => $project->source_type,
@@ -440,7 +442,9 @@ class ProjectController extends Controller
 
             foreach ($episodes as $ep) {
                 $newEpisodeId = $episodeMap[$ep->id] ?? null;
-                if (! $newEpisodeId) continue;
+                if (! $newEpisodeId) {
+                    continue;
+                }
                 foreach ($ep->scenes as $scene) {
                     $newScene = Scene::create([
                         'episode_id' => $newEpisodeId,
@@ -476,6 +480,7 @@ class ProjectController extends Controller
                     }
                 }
             }
+
             return $clone;
         });
 
@@ -485,12 +490,14 @@ class ProjectController extends Controller
     public function archive(Project $project)
     {
         $project->update(['is_archived' => true]);
+
         return redirect()->route('projects.index')->with('success', 'Project archived.');
     }
 
     public function restore(Project $project)
     {
         $project->update(['is_archived' => false]);
+
         return redirect()->route('projects.index')->with('success', 'Project restored.');
     }
 
@@ -510,12 +517,14 @@ class ProjectController extends Controller
         }
         $project->update(['status' => ProjectStatus::Generating]);
         GenerateProjectStructureJob::dispatch($project);
+
         return redirect()->route('projects.show', $project)->with('success', 'Structure generation has been queued for retry.');
     }
 
     public function destroy(Project $project)
     {
         $project->delete();
+
         return redirect()->route('projects.index')->with('success', 'Project deleted.');
     }
 }

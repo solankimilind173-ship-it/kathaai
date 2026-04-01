@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Language extends Model
 {
@@ -49,6 +49,7 @@ class Language extends Model
     {
         return $query->where('is_ai_supported', true);
     }
+
     public function dubbedProjects()
     {
         return $this->belongsToMany(

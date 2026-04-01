@@ -31,6 +31,7 @@ class ScheduleDailyProjectRender extends Command
         $maxPerDay = (int) config('kathaai.auto_render_max_per_project_per_day', 1);
         if ($maxPerDay <= 0) {
             $this->info('Auto render is disabled by configuration.');
+
             return self::SUCCESS;
         }
 
@@ -61,4 +62,3 @@ class ScheduleDailyProjectRender extends Command
         return self::SUCCESS;
     }
 }
-

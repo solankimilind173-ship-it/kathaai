@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpWord\Element\Table;
 use PhpOffice\PhpWord\Element\Text;
 use PhpOffice\PhpWord\Element\TextRun;
-use PhpOffice\PhpWord\Element\Table;
 use PhpOffice\PhpWord\IOFactory;
 use Smalot\PdfParser\Parser as PdfParser;
 use Throwable;
@@ -41,6 +41,7 @@ class StoryFileExtractor
             }
         } catch (Throwable $e) {
             report($e);
+
             return '';
         }
 
@@ -61,7 +62,7 @@ class StoryFileExtractor
 
         $maxBytes = self::MAX_FILE_SIZE_MB * 1024 * 1024;
         if ($file->getSize() > $maxBytes) {
-            $errors[] = 'File must not exceed ' . self::MAX_FILE_SIZE_MB . ' MB.';
+            $errors[] = 'File must not exceed '.self::MAX_FILE_SIZE_MB.' MB.';
         }
 
         $mime = $file->getMimeType();
@@ -74,7 +75,7 @@ class StoryFileExtractor
 
     protected function extractFromPdf(string $path): string
     {
-        $parser = new PdfParser();
+        $parser = new PdfParser;
         $pdf = $parser->parseFile($path);
         $text = $pdf->getText();
 

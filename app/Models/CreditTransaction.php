@@ -46,4 +46,3 @@ class CreditTransaction extends Model
         return $query->where('type', 'usage');
     }
 }
-

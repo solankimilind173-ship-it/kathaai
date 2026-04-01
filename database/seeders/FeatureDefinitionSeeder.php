@@ -25,6 +25,7 @@ class FeatureDefinitionSeeder extends Seeder
             ['key' => 'allow_4k', 'label' => 'Allow 4K export', 'type' => 'boolean', 'options' => null, 'sort_order' => 80],
             ['key' => 'allow_voice_style_selection', 'label' => 'Voice style selection', 'type' => 'boolean', 'options' => null, 'sort_order' => 90],
             ['key' => 'allow_multiple_video_styles', 'label' => 'Multiple video styles', 'type' => 'boolean', 'options' => null, 'sort_order' => 100],
+            ['key' => 'allow_trailer_generation', 'label' => 'Trailer generation', 'type' => 'boolean', 'options' => null, 'sort_order' => 105],
             ['key' => 'max_reels_per_episode', 'label' => 'Max reels per episode', 'type' => 'integer', 'options' => null, 'sort_order' => 110],
             ['key' => 'max_video_minutes', 'label' => 'Max video minutes', 'type' => 'integer', 'options' => null, 'sort_order' => 120],
             ['key' => 'max_projects', 'label' => 'Max projects', 'type' => 'integer', 'options' => null, 'sort_order' => 130],

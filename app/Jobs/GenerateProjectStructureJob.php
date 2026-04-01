@@ -35,6 +35,7 @@ class GenerateProjectStructureJob implements ShouldQueue
 
         if (! $project) {
             Log::warning('GenerateProjectStructureJob: project not found', ['project_id' => $this->projectId]);
+
             return;
         }
 
@@ -44,6 +45,7 @@ class GenerateProjectStructureJob implements ShouldQueue
             if (empty(trim($story ?? ''))) {
                 Log::warning('GenerateProjectStructureJob: no story content', ['project_id' => $project->id]);
                 $project->update(['status' => \App\Enums\ProjectStatus::Failed]);
+
                 return;
             }
 
@@ -54,6 +56,7 @@ class GenerateProjectStructureJob implements ShouldQueue
                 Log::warning('GenerateProjectStructureJob: project was removed before creating chunks', [
                     'project_id' => $this->projectId,
                 ]);
+
                 return;
             }
 
@@ -71,6 +74,7 @@ class GenerateProjectStructureJob implements ShouldQueue
                     Log::warning('GenerateProjectStructureJob: project no longer exists, skipping chunk create', [
                         'project_id' => $this->projectId,
                     ]);
+
                     return;
                 }
                 throw $e;

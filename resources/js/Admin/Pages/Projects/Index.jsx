@@ -29,7 +29,7 @@ export default function AdminProjectsIndex({
             label: 'Title',
             render: (row) => (
                 <Link
-                    href={route('admin.projects.show', row)}
+                    href={route('admin.projects.show', { project: row.id })}
                     className="font-medium text-amber-700 hover:text-amber-800"
                 >
                     {row.title}
@@ -71,7 +71,7 @@ export default function AdminProjectsIndex({
             render: (row) => (
                 <div className="flex items-center gap-2">
                     <Link
-                        href={route('admin.projects.show', row)}
+                        href={route('admin.projects.show', { project: row.id })}
                         className="text-sm font-medium text-amber-600 hover:text-amber-700"
                     >
                         View
@@ -216,7 +216,7 @@ export default function AdminProjectsIndex({
                         </button>
                         <DangerButton
                             onClick={() => {
-                                if (deleteProject) router.delete(route('admin.projects.destroy', deleteProject));
+                                if (deleteProject) router.delete(route('admin.projects.destroy', { project: deleteProject.id }));
                                 setDeleteProject(null);
                             }}
                         >

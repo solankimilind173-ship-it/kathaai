@@ -27,6 +27,7 @@ class OpenAIService
         if (empty($response->choices) || ! isset($response->choices[0]->message->content)) {
             return null;
         }
+
         return $response->choices[0]->message->content;
     }
 
@@ -50,12 +51,12 @@ Return ONLY JSON in this format:
 ]
 
 No markdown. No explanation. Only JSON.
-'
+',
                 ],
                 [
                     'role' => 'user',
-                    'content' => $story
-                ]
+                    'content' => $story,
+                ],
             ],
             'temperature' => 0.7,
         ]);
@@ -64,6 +65,7 @@ No markdown. No explanation. Only JSON.
         if ($content === null) {
             throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
         }
+
         return json_decode($content, true) ?? [];
     }
 
@@ -91,15 +93,15 @@ Rules:
 - Each character must contain name and description
 - No markdown
 - No explanation
-'
+',
                 ],
                 [
                     'role' => 'user',
-                    'content' => $story
-                ]
+                    'content' => $story,
+                ],
             ],
             'temperature' => 0.2,
-            'response_format' => ['type' => 'json_object']
+            'response_format' => ['type' => 'json_object'],
         ]);
 
         $content = $this->getFirstChoiceContent($response);
@@ -133,20 +135,21 @@ Include:
 - cinematic style
 
 Return ONLY the visual description paragraph.
-'
+',
                 ],
                 [
                     'role' => 'user',
-                    'content' => "Character: $name. Description: $description"
-                ]
+                    'content' => "Character: $name. Description: $description",
+                ],
             ],
-            'temperature' => 0.7
+            'temperature' => 0.7,
         ]);
 
         $content = $this->getFirstChoiceContent($response);
         if ($content === null) {
             throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
         }
+
         return $content;
     }
 
@@ -156,16 +159,16 @@ Return ONLY the visual description paragraph.
             ->connectTimeout(60)
             ->retry(3, 5000)
             ->withHeaders([
-                'Authorization' => 'Bearer ' . config('services.openai.key'),
+                'Authorization' => 'Bearer '.config('services.openai.key'),
                 'Content-Type' => 'application/json',
             ])
             ->post('https://api.openai.com/v1/images/generations', [
                 'model' => 'gpt-image-1',
                 'prompt' => $prompt,
-                'size' => '1024x1024'
+                'size' => '1024x1024',
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception($response->body());
         }
 
@@ -192,7 +195,7 @@ Return ONLY the visual description paragraph.
             ->connectTimeout(60)
             ->retry(3, 5000)
             ->withHeaders([
-                'Authorization' => 'Bearer ' . config('services.openai.key'),
+                'Authorization' => 'Bearer '.config('services.openai.key'),
                 'Content-Type' => 'application/json',
             ])
             ->post('https://api.openai.com/v1/images/generations', [
@@ -202,7 +205,7 @@ Return ONLY the visual description paragraph.
             ]);
 
         if (! $response->successful()) {
-            throw new \RuntimeException('Scene image generation failed: ' . $response->body());
+            throw new \RuntimeException('Scene image generation failed: '.$response->body());
         }
 
         $imageBase64 = $response->json('data.0.b64_json');
@@ -236,7 +239,7 @@ Return ONLY the visual description paragraph.
             ->connectTimeout(30)
             ->retry(2, 3000)
             ->withHeaders([
-                'Authorization' => 'Bearer ' . config('services.openai.key'),
+                'Authorization' => 'Bearer '.config('services.openai.key'),
                 'Content-Type' => 'application/json',
             ])
             ->post('https://api.openai.com/v1/audio/speech', [
@@ -246,7 +249,7 @@ Return ONLY the visual description paragraph.
             ]);
 
         if (! $response->successful()) {
-            throw new \RuntimeException('Scene voice generation failed: ' . $response->body());
+            throw new \RuntimeException('Scene voice generation failed: '.$response->body());
         }
 
         $directory = "scenes/{$projectId}";
@@ -268,7 +271,7 @@ Return ONLY the visual description paragraph.
                 fn (array $ref) => "- {$ref['name']}: use locked face reference for all visual descriptions",
                 $lockedFaceReferences
             );
-            $faceRefPrompt = "\n\nAlways use the locked face reference for each character. Maintain visual consistency:\n" . implode("\n", $lines) . "\n";
+            $faceRefPrompt = "\n\nAlways use the locked face reference for each character. Maintain visual consistency:\n".implode("\n", $lines)."\n";
         }
 
         $response = $this->client->chat()->create([
@@ -280,7 +283,12 @@ Return ONLY the visual description paragraph.
                     'content' => '
 You are a screenplay writer.
 
-Break the episode into cinematic scenes.
+Break the episode into cinematic scenes. Each scene is a single shot: one clear moment with characters in the middle of the action.
+
+For each scene, the "description" must be a cinematic visual description that:
+- Describes exactly what each character is DOING (actions, movement, gestures).
+- Includes expressions and body language (how they feel, react, look at each other).
+- Reads as one frame: characters actively doing what the story says, not a generic summary.
 
 Return ONLY valid JSON array.
 
@@ -292,7 +300,7 @@ FORMAT:
    "location":"...",
    "time_of_day":"day/night/evening",
    "mood":"...",
-   "description":"full cinematic visual description"
+   "description":"full cinematic visual description with character actions, movement, and expressions"
  }
 ]
 
@@ -300,19 +308,20 @@ Rules:
 - No markdown
 - No explanation
 - Only JSON array
-' . $faceRefPrompt,
+'.$faceRefPrompt,
                 ],
                 [
                     'role' => 'user',
-                    'content' => $episodeSummary
-                ]
-            ]
+                    'content' => $episodeSummary,
+                ],
+            ],
         ]);
 
         $content = $this->getFirstChoiceContent($response);
 
         if ($content === null || $content === '') {
             Log::error('AI returned empty scene response');
+
             return [];
         }
 
@@ -325,8 +334,9 @@ Rules:
         if (json_last_error() !== JSON_ERROR_NONE) {
             Log::error('Scene JSON decode failed', [
                 'error' => json_last_error_msg(),
-                'ai_response' => $content
+                'ai_response' => $content,
             ]);
+
             return [];
         }
 
@@ -352,12 +362,12 @@ FORMAT:
   {"name":"Kiran","action":"riding a horse through the desert"},
   {"name":"Bhairav","action":"standing on the tower watching horizon"}
 ]
-'
+',
                 ],
                 [
                     'role' => 'user',
-                    'content' => "Scene:\n" . $scene . "\n\nCharacters:\n" . $characterList
-                ]
+                    'content' => "Scene:\n".$scene."\n\nCharacters:\n".$characterList,
+                ],
             ],
             'temperature' => 0.1,
         ]);
@@ -366,6 +376,7 @@ FORMAT:
         if ($content === null) {
             throw new \RuntimeException('OpenAI returned no response (empty choices). Try again or check your API key.');
         }
+
         return json_decode($content, true) ?? [];
     }
 
@@ -393,7 +404,7 @@ Return ONLY valid JSON in this exact format, no markdown:
                 ],
                 [
                     'role' => 'user',
-                    'content' => "Title: {$projectTitle}\n\nSummary:\n" . ($storySummary ?: 'No summary.'),
+                    'content' => "Title: {$projectTitle}\n\nSummary:\n".($storySummary ?: 'No summary.'),
                 ],
             ],
             'temperature' => 0.7,
@@ -408,6 +419,7 @@ Return ONLY valid JSON in this exact format, no markdown:
         if (! is_array($hashtags)) {
             $hashtags = [];
         }
+
         return [
             'title' => $data['title'] ?? $projectTitle,
             'description' => $data['description'] ?? '',

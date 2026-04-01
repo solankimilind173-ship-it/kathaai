@@ -54,10 +54,12 @@ class UserService
                 $email = trim(strip_tags((string) ($row['email'] ?? '')));
                 if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     $skipped++;
+
                     continue;
                 }
                 if (User::where('email', $email)->exists()) {
                     $skipped++;
+
                     continue;
                 }
                 User::create([

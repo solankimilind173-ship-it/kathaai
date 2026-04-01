@@ -21,7 +21,7 @@ class RegistrationOtp extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your verification code – ' . config('app.name'),
+            subject: 'Your verification code – '.config('app.name'),
             replyTo: [config('mail.from.address')],
         );
     }

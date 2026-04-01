@@ -68,8 +68,9 @@ class CsvUserImportStructureTest extends TestCase
 
     private function createCsvFile(string $content): UploadedFile
     {
-        $path = sys_get_temp_dir() . '/test_import_' . uniqid() . '.csv';
+        $path = sys_get_temp_dir().'/test_import_'.uniqid().'.csv';
         file_put_contents($path, $content);
+
         return new UploadedFile($path, 'test.csv', 'text/csv', null, true);
     }
 }

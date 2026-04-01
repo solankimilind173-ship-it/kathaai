@@ -164,6 +164,12 @@ export default function Upgrade({ plans = [], currentPlan = null, yearlyDiscount
                                                 Intro song generation
                                             </li>
                                         )}
+                                        {Boolean(plan.allow_trailer_generation) && (
+                                            <li className="flex items-center gap-2 text-sm text-stone-700">
+                                                <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />
+                                                Trailer generation (>= 1h project)
+                                            </li>
+                                        )}
                                         {Boolean(plan.allow_background_music) && (
                                             <li className="flex items-center gap-2 text-sm text-stone-700">
                                                 <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />

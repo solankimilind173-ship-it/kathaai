@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Scene;
+use App\Services\ElevenLabsService;
 use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,11 +30,12 @@ class RegenerateSceneVoiceJob implements ShouldQueue
         $this->sceneId = $scene->id;
     }
 
-    public function handle(OpenAIService $ai): void
+    public function handle(OpenAIService $ai, ElevenLabsService $elevenLabs): void
     {
         $scene = Scene::with('episode')->find($this->sceneId);
         if (! $scene || ! $scene->episode) {
             Log::warning('RegenerateSceneVoiceJob: scene or episode missing', ['scene_id' => $this->sceneId]);
+
             return;
         }
 
@@ -43,22 +45,35 @@ class RegenerateSceneVoiceJob implements ShouldQueue
             if (Scene::where('id', $this->sceneId)->exists()) {
                 Scene::where('id', $this->sceneId)->update(['status' => 'voice_failed']);
             }
+
             return;
         }
 
         try {
             $scene->update(['status' => 'regenerating_voice']);
             $projectId = $scene->episode->project_id;
-            $filename = 'regen-voice-' . $scene->id . '-' . Str::slug(substr($scene->title ?? 's', 0, 20)) . '-' . uniqid();
-            $path = $ai->generateSceneVoice($text, $filename, $projectId);
-            $scene->update([
-                'voice_url' => $path,
-                'status' => 'characters_mapped',
-            ]);
+            $filename = 'regen-voice-'.$scene->id.'-'.Str::slug(substr($scene->title ?? 's', 0, 20)).'-'.uniqid();
+
+            $voiceProvider = config('kathaai.voice_provider', 'openai');
+            $useElevenLabs = $voiceProvider === 'elevenlabs' && $elevenLabs->isConfigured();
+            if ($useElevenLabs) {
+                $path = $elevenLabs->textToSpeech($text, $filename, $projectId);
+                $scene->update([
+                    'voice_url' => $path,
+                    'status' => 'characters_mapped',
+                ]);
+            } else {
+                $path = $ai->generateSceneVoice($text, $filename, $projectId);
+                $scene->update([
+                    'voice_url' => $path,
+                    'status' => 'characters_mapped',
+                ]);
+            }
             Log::info('RegenerateSceneVoiceJob: scene voice updated', ['scene_id' => $scene->id]);
         } catch (QueryException $e) {
             if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'foreign key constraint')) {
                 Log::warning('RegenerateSceneVoiceJob: scene no longer exists', ['scene_id' => $this->sceneId]);
+
                 return;
             }
             throw $e;

@@ -15,12 +15,12 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('character_id')
-                  ->constrained()
-                  ->onDelete('cascade');
+                ->constrained()
+                ->onDelete('cascade');
 
             $table->foreignId('scene_id')
-                  ->constrained()
-                  ->onDelete('cascade');
+                ->constrained()
+                ->onDelete('cascade');
 
             $table->string('action')->nullable();
 

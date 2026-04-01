@@ -18,17 +18,17 @@ class NotificationService
      */
     public function sendWelcomeEmail(User $user): void
     {
-        if (!$user->getPreference(User::PREF_EMAIL_WELCOME, true)) {
+        if (! $user->getPreference(User::PREF_EMAIL_WELCOME, true)) {
             return;
         }
         $recipient = $user->email;
-        $subject = 'Welcome to ' . config('app.name');
+        $subject = 'Welcome to '.config('app.name');
 
         try {
             Mail::to($recipient)->send(new WelcomeRegistered($user));
             $this->log('welcome', $user->id, $recipient, $subject, null, null, null);
         } catch (\Throwable $e) {
-            Log::error('Welcome email failed: ' . $e->getMessage(), ['user_id' => $user->id]);
+            Log::error('Welcome email failed: '.$e->getMessage(), ['user_id' => $user->id]);
         }
     }
 
@@ -37,11 +37,11 @@ class NotificationService
      */
     public function sendPasswordChangedEmail(User $user, ?string $location = null, ?string $deviceId = null): void
     {
-        if (!$user->getPreference(User::PREF_EMAIL_PASSWORD_CHANGED, true)) {
+        if (! $user->getPreference(User::PREF_EMAIL_PASSWORD_CHANGED, true)) {
             return;
         }
         $recipient = $user->email;
-        $subject = 'Your password was changed – ' . config('app.name');
+        $subject = 'Your password was changed – '.config('app.name');
 
         try {
             Mail::to($recipient)->send(new PasswordChanged($user, $location, $deviceId));
@@ -50,7 +50,7 @@ class NotificationService
                 'device_id' => $deviceId,
             ]);
         } catch (\Throwable $e) {
-            Log::error('Password changed email failed: ' . $e->getMessage(), ['user_id' => $user->id]);
+            Log::error('Password changed email failed: '.$e->getMessage(), ['user_id' => $user->id]);
         }
     }
 
@@ -59,17 +59,17 @@ class NotificationService
      */
     public function sendProjectStepCompleted(User $user, Project $project, string $stepName, string $stepDescription): void
     {
-        if (!$user->getPreference(User::PREF_EMAIL_PROJECT_STEP, true)) {
+        if (! $user->getPreference(User::PREF_EMAIL_PROJECT_STEP, true)) {
             return;
         }
         $recipient = $user->email;
-        $subject = 'Project step completed: ' . $stepName . ' – ' . $project->title;
+        $subject = 'Project step completed: '.$stepName.' – '.$project->title;
 
         try {
             Mail::to($recipient)->send(new ProjectStepCompleted($user, $project, $stepName, $stepDescription));
             $this->log('project_step', $user->id, $recipient, $subject, $stepName, $project->id, null);
         } catch (\Throwable $e) {
-            Log::error('Project step email failed: ' . $e->getMessage(), [
+            Log::error('Project step email failed: '.$e->getMessage(), [
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'step' => $stepName,

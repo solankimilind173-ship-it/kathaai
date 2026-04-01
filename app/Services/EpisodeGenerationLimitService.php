@@ -29,6 +29,7 @@ class EpisodeGenerationLimitService
             return 1;
         }
         $value = $plan->max_episodes_per_day ?? null;
+
         return $value !== null ? (int) $value : 1;
     }
 
@@ -47,6 +48,7 @@ class EpisodeGenerationLimitService
     {
         $used = $this->episodesGeneratedToday($user);
         $max = $this->maxEpisodesPerDay($user);
+
         return max(0, $max - $used);
     }
 
@@ -56,6 +58,7 @@ class EpisodeGenerationLimitService
     public function limitReachedMessage(User $user): string
     {
         $max = $this->maxEpisodesPerDay($user);
+
         return "Your plan allows {$max} episode generation(s) per day. You've reached today's limit. Try again tomorrow or upgrade for more.";
     }
 }

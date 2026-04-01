@@ -30,6 +30,7 @@ class RenderController extends Controller
             'fps' => 'nullable|integer|in:24,30',
             'background_music' => 'nullable|boolean',
             'subtitle_style' => 'nullable|string|max:64',
+            'trailer' => 'nullable|boolean',
         ]);
         $format = $this->resolveFormat($request);
         $durationMinutes = $this->startRenderService->getProjectDurationMinutes($project);
@@ -40,6 +41,7 @@ class RenderController extends Controller
             'duration_minutes' => $durationMinutes,
             'background_music' => (bool) $request->input('background_music', false),
         ]);
+
         return response()->json([
             'cost' => $cost,
             'duration_minutes' => $durationMinutes,
@@ -61,11 +63,25 @@ class RenderController extends Controller
             'fps' => 'required|integer|in:24,30',
             'subtitle_style' => 'nullable|string|max:64',
             'background_music' => 'nullable|boolean',
+            'trailer' => 'nullable|boolean',
         ]);
         $resolution = $request->input('resolution', '1080p');
         if ($resolution === '4k' && ! ($plan && $plan->allow_4k)) {
             return back()->withErrors(['resolution' => '4K is not available on your plan.']);
         }
+
+        $trailer = (bool) $request->input('trailer', false);
+        $durationMinutes = $this->startRenderService->getProjectDurationMinutes($project);
+
+        if ($trailer) {
+            if (! ($plan && $plan->allow_trailer_generation)) {
+                return back()->withErrors(['trailer' => 'Trailer generation is not available on your plan.']);
+            }
+            if ($durationMinutes <= 60) {
+                return back()->withErrors(['trailer' => 'Trailer generation requires project duration longer than 60 minutes.']);
+            }
+        }
+
         $videoFormat = VideoFormat::from($request->input('video_format'));
         $options = [
             'resolution' => $resolution,
@@ -74,6 +90,7 @@ class RenderController extends Controller
             'fps' => (int) $request->input('fps'),
             'subtitle_style' => $request->input('subtitle_style', 'default'),
             'background_music' => (bool) $request->input('background_music', false),
+            'trailer' => $trailer,
         ];
         $renderLog = $this->startRenderService->startRender($project, $options, $user);
         if (! $renderLog) {
@@ -85,10 +102,12 @@ class RenderController extends Controller
                 'duration_minutes' => $durationMinutes,
                 'background_music' => $options['background_music'],
             ]);
+
             return back()->withErrors([
                 'credits' => "Insufficient credits. Required: {$amount}, available: {$user->credits}.",
             ]);
         }
+
         return redirect()->route('projects.show', $project)->with('success', 'Render started. Title, description and 10 hashtags have been generated for this video.');
     }
 
@@ -105,6 +124,7 @@ class RenderController extends Controller
         $project->update(['status' => \App\Enums\ProjectStatus::Rendering]);
         ProjectEngagement::incrementFor($project, 'render_count');
         RenderProjectJob::dispatch($project, $lastFailed, []);
+
         return redirect()->route('projects.show', $project)->with('success', 'Render has been queued for retry.');
     }
 
@@ -113,6 +133,7 @@ class RenderController extends Controller
         if ($request->filled('video_format')) {
             return VideoFormat::from($request->input('video_format'))->aspectRatio();
         }
+
         return $request->input('format', '16:9');
     }
 }

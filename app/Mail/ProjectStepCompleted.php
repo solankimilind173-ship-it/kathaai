@@ -24,7 +24,7 @@ class ProjectStepCompleted extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Project step completed: ' . $this->stepName . ' – ' . $this->project->title,
+            subject: 'Project step completed: '.$this->stepName.' – '.$this->project->title,
             replyTo: [config('mail.from.address')],
         );
     }

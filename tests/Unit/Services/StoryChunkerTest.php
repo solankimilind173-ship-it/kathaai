@@ -27,7 +27,7 @@ class StoryChunkerTest extends TestCase
     {
         $sentences = [];
         for ($i = 0; $i < 5; $i++) {
-            $sentences[] = 'Sentence number ' . ($i + 1) . ' here.';
+            $sentences[] = 'Sentence number '.($i + 1).' here.';
         }
         $story = implode(' ', $sentences);
         $chunks = $this->chunker->chunk($story, 50);
@@ -39,7 +39,7 @@ class StoryChunkerTest extends TestCase
 
     public function test_chunk_trims_and_collapses_whitespace(): void
     {
-        $story = "  Multiple   spaces   between.   Words here.  ";
+        $story = '  Multiple   spaces   between.   Words here.  ';
         $chunks = $this->chunker->chunk($story, 500);
         $this->assertCount(1, $chunks);
         $this->assertSame('Multiple spaces between. Words here.', $chunks[0]);

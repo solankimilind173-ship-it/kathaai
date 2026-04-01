@@ -60,7 +60,7 @@ class SceneController extends Controller
         $user = auth()->user();
         if (! $creditService->hasEnoughForSceneImage($user)) {
             return back()->withErrors([
-                'credits' => 'Insufficient credits. Required: ' . $creditService->sceneImageRegenerationCost(),
+                'credits' => 'Insufficient credits. Required: '.$creditService->sceneImageRegenerationCost(),
             ]);
         }
 
@@ -91,7 +91,7 @@ class SceneController extends Controller
         $user = auth()->user();
         if (! $creditService->hasEnoughForSceneVoice($user)) {
             return back()->withErrors([
-                'credits' => 'Insufficient credits. Required: ' . $creditService->sceneVoiceRegenerationCost(),
+                'credits' => 'Insufficient credits. Required: '.$creditService->sceneVoiceRegenerationCost(),
             ]);
         }
 
