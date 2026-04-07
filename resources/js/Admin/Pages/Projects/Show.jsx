@@ -21,10 +21,15 @@ export default function AdminProjectsShow({ project }) {
     return (
         <AdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="text-xl font-semibold leading-tight text-white">
                     Project details
                 </h2>
             }
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Projects', href: route('admin.projects.index') },
+                { label: project.title },
+            ]}
         >
             <Head title={`Admin – ${project.title}`} />
 

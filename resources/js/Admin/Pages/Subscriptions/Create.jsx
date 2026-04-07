@@ -92,10 +92,15 @@ export default function AdminSubscriptionsCreate({ featureDefinitions = [] }) {
     return (
         <AdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="text-xl font-semibold leading-tight text-white">
                     Create plan
                 </h2>
             }
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Plans', href: route('admin.subscriptions.index') },
+                { label: 'Create plan' },
+            ]}
         >
             <Head title="Admin – Create plan" />
 

@@ -9,8 +9,10 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import { Head, Link, router } from '@inertiajs/react';
 import Alert from '@/Components/Alert';
 import LanguageSelect from '@/Components/LanguageSelect';
+import OnboardingTour from '@/Components/OnboardingTour';
+import useOnboarding from '@/Hooks/useOnboarding';
 import { useForm } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const defaultPlan = {
     max_dubbing_languages: 1,
@@ -38,13 +40,17 @@ export default function Create({
     sceneGenerationCredits = 50,
     userCredits = 0,
     hasEnoughForSceneGeneration = false,
+    demoProjectEligible = false,
 }) {
+    const { onboarding, startTour, advance, skipTour } = useOnboarding();
     const safePlan = plan ?? defaultPlan;
     const limit = episodeLimit ?? defaultEpisodeLimit;
     const remainingToday = limit.remaining_today ?? 0;
     const atDailyLimit = remainingToday <= 0;
     const [activeTab, setActiveTab] = useState(TAB_STORY);
     const [storyFile, setStoryFile] = useState(null);
+    const [showStoryTour, setShowStoryTour] = useState(false);
+    const [showVideoTour, setShowVideoTour] = useState(false);
     const fileInputRef = useRef(null);
     const defaultFrame = videoFrames.length > 0 ? videoFrames[0].id : '16:9';
     const defaultVideoType = videoTypes.length > 0 ? videoTypes[0].id : '';
@@ -72,15 +78,85 @@ export default function Create({
     const canGoToTab2 =
         data.title?.trim() &&
         (isLibrary ? data.book_id : hasStoryContent);
+    const isFreeDemoProject = demoProjectEligible || onboarding.demo_project_eligible;
+    const effectiveSceneGenerationCredits = isFreeDemoProject ? 0 : sceneGenerationCredits;
+    const hasEnoughCreditsForCreation = isFreeDemoProject ? true : hasEnoughForSceneGeneration;
     const hasTab2Required =
         data.video_frame &&
         (data.video_type || videoTypes.length === 0);
     const canCreate =
         !atDailyLimit &&
-        hasEnoughForSceneGeneration &&
+        hasEnoughCreditsForCreation &&
         data.title?.trim() &&
         (isLibrary ? data.book_id : hasStoryContent) &&
         hasTab2Required;
+
+    useEffect(() => {
+        if (onboarding.status === 'not_started' && isFreeDemoProject) {
+            startTour();
+        }
+    }, [isFreeDemoProject, onboarding.status, startTour]);
+
+    useEffect(() => {
+        const shouldShow =
+            onboarding.status === 'in_progress' &&
+            isFreeDemoProject &&
+            activeTab === TAB_STORY &&
+            [
+                null,
+                'dashboard-create-project',
+                'create-source-section',
+                'create-story-input',
+                'create-next-tab',
+            ].includes(onboarding.last_step ?? null);
+
+        setShowStoryTour(shouldShow);
+    }, [activeTab, isFreeDemoProject, onboarding.last_step, onboarding.status]);
+
+    useEffect(() => {
+        const shouldShow =
+            onboarding.status === 'in_progress' &&
+            activeTab === TAB_VIDEO_TYPE &&
+            ['create-next-tab', 'create-visual-settings', 'create-submit-project'].includes(onboarding.last_step ?? '');
+
+        setShowVideoTour(shouldShow);
+    }, [activeTab, onboarding.last_step, onboarding.status]);
+
+    const storyTourSteps = [
+        {
+            id: 'create-source-section',
+            title: 'Choose how you want to start',
+            body: 'Pick a library story or paste and upload your own text for the free demo project.',
+            target: '[data-tour-id="create-source-section"]',
+        },
+        {
+            id: 'create-story-input',
+            title: 'Add the story details',
+            body: 'Give the project a title and add the story text or file that KathaAI will turn into episodes.',
+            target: '[data-tour-id="create-story-input"]',
+        },
+        {
+            id: 'create-next-tab',
+            title: 'Continue to visual settings',
+            body: 'Once the story information is ready, move to the next step to choose the frame and visual style.',
+            target: '[data-tour-id="create-next-tab"]',
+        },
+    ];
+
+    const videoTourSteps = [
+        {
+            id: 'create-visual-settings',
+            title: 'Set the cinematic look',
+            body: 'Choose the frame, video type, and render defaults that should guide the generated result.',
+            target: '[data-tour-id="create-visual-settings"]',
+        },
+        {
+            id: 'create-submit-project',
+            title: 'Launch your free demo project',
+            body: 'Create the project to start structure generation. Your first demo project will not use scene-generation credits.',
+            target: '[data-tour-id="create-submit-project"]',
+        },
+    ];
 
     function submit(e) {
         e.preventDefault();
@@ -134,8 +210,9 @@ export default function Create({
 
     return (
         <AuthenticatedLayout
+            tone="projects"
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">Create Project</h2>
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">Create Project</h2>
             }
         >
             <Head
@@ -149,8 +226,11 @@ export default function Create({
                         title="Create New Story Project"
                         description={
                             <>
-                                Choose a library book or paste your own story. Credits will be deducted for scene generation.
+                                Choose a library book or paste your own story.
                                 <span className="mt-2 block text-sm text-stone-600">
+                                    {isFreeDemoProject
+                                        ? 'Your first demo project is free, so scene generation credits will not be deducted for this one.'
+                                        : 'Credits will be deducted for scene generation.'}{' '}
                                     Your plan: {limit.max_per_day} episode generation{limit.max_per_day !== 1 ? 's' : ''} per day. Used today: {limit.used_today}/{limit.max_per_day}.
                                     {atDailyLimit && (
                                         <span className="text-amber-600 font-medium"> Try again tomorrow or upgrade for more.</span>
@@ -165,6 +245,32 @@ export default function Create({
                         }
                     />
 
+                    <div className="cinematic-hero-card mb-6 rounded-[1.75rem] p-6 text-white sm:p-8">
+                        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-200">Project setup</p>
+                                <h2 className="mt-3 font-display text-3xl sm:text-4xl">Shape the story before the first frame is generated.</h2>
+                                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                                    Choose the source, define visual format, and set creative defaults so the AI pipeline can build a cinematic result that feels deliberate from scene one.
+                                </p>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                                <div className="rounded-[1.25rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-md">
+                                    <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Episode limit today</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{remainingToday}</p>
+                                </div>
+                                <div className="rounded-[1.25rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-md">
+                                    <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Scene generation cost</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{effectiveSceneGenerationCredits}</p>
+                                </div>
+                                <div className="rounded-[1.25rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-md">
+                                    <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Your credits</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{userCredits}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {Object.keys(errors).length > 0 && (
                         <Alert variant="error" title="Please fix the errors below." className="mb-6">
                             <ul className="list-disc list-inside text-sm">
@@ -175,8 +281,40 @@ export default function Create({
                         </Alert>
                     )}
 
+                    {isFreeDemoProject && (
+                        <Card className="mb-6 border-amber-300/40 bg-amber-50/90">
+                            <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">Free demo project</p>
+                                    <h3 className="mt-2 font-display text-2xl text-stone-900">Follow this guided setup once, then watch the AI pipeline work.</h3>
+                                    <p className="mt-2 text-sm leading-7 text-stone-600">
+                                        This first project is designed to teach the product as you use it. You will not spend scene-generation credits on this demo run.
+                                    </p>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">Step 1</p>
+                                        <p className="mt-1 text-sm text-stone-600">Choose the source and give the story a strong title.</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">Step 2</p>
+                                        <p className="mt-1 text-sm text-stone-600">Paste the story text or upload a readable PDF or Word file.</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">Step 3</p>
+                                        <p className="mt-1 text-sm text-stone-600">Pick the frame and video style you want KathaAI to aim for.</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">Step 4</p>
+                                        <p className="mt-1 text-sm text-stone-600">Create the project and continue to the generated episode and scene review.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
                     <Card>
-                        <form onSubmit={submit} className="space-y-6">
+                        <form onSubmit={submit} className="space-y-6 text-stone-900">
                             {/* Tabs */}
                             <div className="flex border-b border-gray-200">
                                 <button
@@ -205,10 +343,10 @@ export default function Create({
 
                             {activeTab === TAB_STORY && (
                             <>
-                            <div>
+                            <div data-tour-id="create-source-section">
                                 <InputLabel value="How do you want to create your project?" />
                                 <div className="mt-2 flex gap-4">
-                                    <label className="inline-flex items-center">
+                                    <label className="inline-flex items-center text-stone-800">
                                         <input
                                             type="radio"
                                             name="source_type"
@@ -217,9 +355,9 @@ export default function Create({
                                             onChange={() => setData('source_type', 'library')}
                                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
-                                        <span className="ml-2">From Library Book</span>
+                                        <span className="ml-2 text-stone-800">From Library Book</span>
                                     </label>
-                                    <label className="inline-flex items-center">
+                                    <label className="inline-flex items-center text-stone-800">
                                         <input
                                             type="radio"
                                             name="source_type"
@@ -228,12 +366,12 @@ export default function Create({
                                             onChange={() => setData('source_type', 'uploaded')}
                                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
-                                        <span className="ml-2">From Uploaded Book</span>
+                                        <span className="ml-2 text-stone-800">From Uploaded Book</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <div>
+                            <div data-tour-id="create-story-input">
                                 <InputLabel value="Project Title" />
                                 <TextInput
                                     className="mt-1 block w-full"
@@ -347,13 +485,20 @@ export default function Create({
                             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                                 <InputLabel value="Credit estimation" />
                                 <p className="mt-1 text-sm text-gray-600">
-                                    Scene generation: <strong>{sceneGenerationCredits} credits</strong> will be deducted when you
-                                    create the project.
+                                    Scene generation: <strong>{effectiveSceneGenerationCredits} credits</strong>{' '}
+                                    {isFreeDemoProject
+                                        ? 'for this guided demo project.'
+                                        : 'will be deducted when you create the project.'}
                                 </p>
                                 <p className="mt-1 text-sm text-gray-600">
                                     Your balance: <strong>{userCredits} credits</strong>
                                 </p>
-                                {!hasEnoughForSceneGeneration && (
+                                {isFreeDemoProject && (
+                                    <p className="mt-2 text-sm font-medium text-emerald-700">
+                                        Demo unlocked: your first project will be created for free.
+                                    </p>
+                                )}
+                                {!hasEnoughCreditsForCreation && (
                                     <p className="mt-2 text-sm font-medium text-red-600">
                                         Insufficient credits. You need {sceneGenerationCredits} credits to create this project.
                                     </p>
@@ -363,8 +508,15 @@ export default function Create({
                             <div className="flex justify-end">
                                 <PrimaryButton
                                     type="button"
-                                    onClick={() => canGoToTab2 && setActiveTab(TAB_VIDEO_TYPE)}
+                                    onClick={() => {
+                                        if (!canGoToTab2) return;
+                                        setActiveTab(TAB_VIDEO_TYPE);
+                                        if (onboarding.status === 'in_progress') {
+                                            advance('create-next-tab');
+                                        }
+                                    }}
                                     disabled={!canGoToTab2}
+                                    data-tour-id="create-next-tab"
                                 >
                                     Next
                                 </PrimaryButton>
@@ -375,7 +527,7 @@ export default function Create({
                             {activeTab === TAB_VIDEO_TYPE && (
                             <div className="space-y-6">
                                 {/* Frame selection: small icons with size ratio */}
-                                <div>
+                                <div data-tour-id="create-visual-settings">
                                     <InputLabel value="Frame (aspect ratio) (required)" />
                                     <p className="mt-1 text-sm text-stone-600">Choose the video size ratio.</p>
                                     <div className="mt-2 flex flex-wrap gap-3">
@@ -514,7 +666,7 @@ export default function Create({
                                         <InputError message={errors.default_subtitle_style} className="mt-1" />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="inline-flex items-center mt-2">
+                                        <label className="mt-2 inline-flex items-center text-stone-800">
                                             <input
                                                 type="checkbox"
                                                 checked={data.background_music}
@@ -533,7 +685,7 @@ export default function Create({
 
                             {activeTab === TAB_VIDEO_TYPE && (
                                 <Card.Footer>
-                                    <PrimaryButton type="submit" disabled={processing || !canCreate}>
+                                    <PrimaryButton type="submit" disabled={processing || !canCreate} data-tour-id="create-submit-project">
                                         {processing ? 'Creating...' : 'Create Project'}
                                     </PrimaryButton>
                                 </Card.Footer>
@@ -542,6 +694,28 @@ export default function Create({
                     </Card>
                 </div>
             </div>
+
+            <OnboardingTour
+                open={showStoryTour}
+                steps={storyTourSteps}
+                onClose={() => {
+                    setShowStoryTour(false);
+                    skipTour();
+                }}
+                onFinish={() => setShowStoryTour(false)}
+                onAdvance={(stepId) => advance(stepId)}
+            />
+
+            <OnboardingTour
+                open={showVideoTour}
+                steps={videoTourSteps}
+                onClose={() => {
+                    setShowVideoTour(false);
+                    skipTour();
+                }}
+                onFinish={() => setShowVideoTour(false)}
+                onAdvance={(stepId) => advance(stepId)}
+            />
         </AuthenticatedLayout>
     );
 }

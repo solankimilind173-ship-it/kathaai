@@ -97,10 +97,15 @@ export default function AdminSubscriptionsEdit({ plan, featureDefinitions = [], 
     return (
         <AdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="text-xl font-semibold leading-tight text-white">
                     Edit plan
                 </h2>
             }
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Plans', href: route('admin.subscriptions.index') },
+                { label: plan?.name ?? 'Edit plan' },
+            ]}
         >
             <Head title={`Admin – Edit ${plan?.name}`} />
 

@@ -40,8 +40,9 @@ const FAQ = [
 export default function HelpIndex() {
     return (
         <AuthenticatedLayout
+            tone="help"
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">
                     Help
                 </h2>
             }

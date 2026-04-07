@@ -1,53 +1,96 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# KathaAI
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+KathaAI is a Laravel 12 + Inertia.js + React application for turning stories into structured video projects with episodes, scenes, character assets, voice generation, rendering pipelines, and subscription-aware feature gating.
 
-## Daily auto-render pipeline
+## Stack
 
-This project includes an automated video generation pipeline that can render **at most one video per project per day**.
+- Laravel 12
+- Inertia.js + React
+- Vite + Tailwind CSS
+- MySQL for local development, SQLite in tests
+- Queue jobs for long-running generation and render workflows
+- Optional integrations: OpenAI, ElevenLabs, Runway, Stripe, Google OAuth, Apple Sign In
 
-### How it works
+## Core capabilities
 
-- After scenes and scene media (images + voice) are generated, the pipeline can automatically start a render using `RenderProjectJob`.
-- A scheduled command runs every day at **06:00 server time**:
-  - Command: `php artisan projects:auto-render`
-  - Defined in `app/Console/Commands/ScheduleDailyProjectRender.php`.
-  - Scheduled in `bootstrap/app.php` via `withSchedule(...)`.
-- The command finds eligible, non-archived projects and dispatches `RunDailyRenderPipelineJob`, which in turn queues `GenerateProjectSceneMediaJob` and (if allowed) a render via `StartRenderService`.
+- Story-to-project workflow with episodes, scenes, and characters
+- Scene media generation, regeneration limits, and render logs
+- Auto-render scheduling with a daily per-project cap
+- Subscription plans, credits, analytics, and admin tooling
+- Shared/public project access and video gallery screens
 
-### Daily limits and configuration
+## Quick start
 
-- Per-project daily auto-rendering is controlled by:
-  - `config('kathaai.auto_render_after_pipeline')`
-  - `config('kathaai.auto_render_max_per_project_per_day')`
-- Relevant environment variables:
-  - `KATHAAI_AUTO_RENDER_AFTER_PIPELINE=true`
-  - `KATHAAI_AUTO_RENDER_MAX_PER_PROJECT_PER_DAY=1`
-- Each project tracks its last successful auto-render start in the `projects.last_auto_render_at` column.
-  - If a project has already auto-rendered today, additional auto-renders are skipped for that day.
-  - Manual renders via the UI are not subject to this daily limit.
+### Prerequisites
 
-### Requirements for auto-rendering
+- PHP 8.2+
+- Composer 2
+- Node.js 18+
+- MySQL 8+ or compatible local database
+- FFmpeg available on `PATH` or configured via `FFMPEG_PATH`
 
-- **Queue workers** must be running so that jobs like `GenerateProjectSceneMediaJob`, `RunDailyRenderPipelineJob`, and `RenderProjectJob` are processed.
-- **Scheduler/cron** must execute the Laravel scheduler, for example:
+### Local setup
 
 ```bash
-* * * * * php /path/to/artisan schedule:run >> /dev/null 2>&1
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
 ```
 
-- **FFmpeg** must be installed and accessible on the server:
-  - Configure via `config/video.php` using:
-    - `FFMPEG_PATH` in `.env` (e.g. `/usr/local/bin/ffmpeg`)
-    - or by ensuring `ffmpeg` is available on the system `PATH`.
+### Run the app
 
-### UI feedback
+```bash
+composer run dev
+```
 
-- On the project detail page:
-  - The **Overview** section shows the *Last auto render* and an approximate *Next auto render* date per project, based on `last_auto_render_at`.
-  - The **Video outputs** and **Render history** sections list past renders and pipeline log entries for the project.
+That starts the Laravel server, queue listener, log tailing, and Vite dev server together.
+
+## Useful commands
+
+```bash
+composer test
+composer lint
+composer quality
+npm run dev
+npm run build
+```
+
+## Environment notes
+
+- Copy `.env.example` and add your own credentials locally.
+- Set `OPENAI_API_KEY` to enable AI generation features.
+- Set `KATHAAI_VOICE_PROVIDER=elevenlabs` to use ElevenLabs instead of the default voice path.
+- Set `KATHAAI_VIDEO_PROVIDER=runway` to use Runway for image-to-video rendering.
+- Configure Stripe and OAuth variables only if those flows are needed.
+
+## Auto-render pipeline
+
+KathaAI includes a scheduled auto-render pipeline that can start at most one video render per project per day.
+
+- Scheduled command: `php artisan projects:auto-render`
+- Command class: `app/Console/Commands/ScheduleDailyProjectRender.php`
+- Main configuration: `config/kathaai.php`
+- Queue workers must be running for the pipeline to execute
+
+## Project docs
+
+- [Implementation reference](docs/IMPLEMENTATION.md)
+- [API examples](docs/API_EXAMPLES.md)
+- [CSV import guide](docs/CSV_IMPORT.md)
+- [Deployment guide](DEPLOYMENT.md)
+- [Deployment troubleshooting](DEPLOY.md)
+
+## Testing
+
+The test suite uses SQLite in memory through `phpunit.xml`, so it does not require your local MySQL database to be running.
+
+```bash
+php artisan test
+```
+
+## CI
+
+A GitHub Actions workflow is included to validate the PHP test suite and front-end build on pushes and pull requests.

@@ -76,6 +76,16 @@ class User extends Authenticatable
         return $this->hasMany(Project::class);
     }
 
+    public function hasCreatedProjects(): bool
+    {
+        return $this->projects()->exists();
+    }
+
+    public function isEligibleForDemoProject(): bool
+    {
+        return ! $this->hasCreatedProjects();
+    }
+
     public function plan()
     {
         return $this->belongsTo(Plan::class);

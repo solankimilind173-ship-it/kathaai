@@ -5,8 +5,8 @@ namespace App\Jobs;
 use App\Enums\ProjectStatus;
 use App\Enums\VideoFormat;
 use App\Models\Project;
-use App\Services\ElevenLabsService;
-use App\Services\OpenAIService;
+use App\Services\ProjectPipelineService;
+use App\Services\SceneMediaGenerationService;
 use App\Services\StartRenderService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,20 +24,48 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
 
     public int $projectId;
 
-    public int $tries = 2;
+    public int $tries = 5;
 
     public int $timeout = 600;
+
+    public function backoff(): array
+    {
+        return [30, 60, 120, 300];
+    }
 
     public function __construct(Project $project)
     {
         $this->projectId = $project->id;
     }
 
-    public function handle(OpenAIService $ai, ElevenLabsService $elevenLabs): void
+    public function handle(SceneMediaGenerationService $mediaGenerator, ProjectPipelineService $pipeline): void
     {
         $project = Project::with(['episodes.scenes.characters'])->find($this->projectId);
         if (! $project) {
             Log::warning('GenerateProjectSceneMediaJob: project not found', ['project_id' => $this->projectId]);
+
+            return;
+        }
+
+        $readiness = $pipeline->sceneMediaReadiness($project);
+        if (! $readiness['ready']) {
+            if ($this->attempts() < $this->tries) {
+                Log::info('GenerateProjectSceneMediaJob: scene media not ready yet, releasing back to queue', [
+                    'project_id' => $project->id,
+                    'attempt' => $this->attempts(),
+                    'reason' => $readiness['reason'],
+                ]);
+                $this->release($this->backoff()[min($this->attempts() - 1, count($this->backoff()) - 1)]);
+
+                return;
+            }
+
+            Log::warning('GenerateProjectSceneMediaJob: scene media still not ready after retries', [
+                'project_id' => $project->id,
+                'reason' => $readiness['reason'],
+            ]);
+
+            $pipeline->syncProjectStatus($project);
 
             return;
         }
@@ -76,51 +104,49 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
 
                 if ($needsImage) {
                     try {
+                        $this->updateScene($scene->id, ['status' => 'generating_image']);
                         $imagePrompt = $this->buildSceneImagePrompt($scene, $project);
-                        $path = $ai->generateSceneImage($imagePrompt, $prefix.'-img', $project->id);
+                        $path = $mediaGenerator->generateImage($scene, $project, $prefix.'-img', $imagePrompt);
                         $this->updateScene($scene->id, ['image_url' => $path]);
+                        $this->refreshSceneStatus($scene->id);
                     } catch (Throwable $e) {
                         Log::warning('GenerateProjectSceneMediaJob: scene image failed', [
                             'scene_id' => $scene->id,
                             'error' => $e->getMessage(),
                         ]);
+                        $this->updateScene($scene->id, ['status' => 'image_failed']);
                     }
                 }
 
                 if ($needsVoice) {
                     try {
-                        $voiceProvider = config('kathaai.voice_provider', 'openai');
-                        $useElevenLabs = $voiceProvider === 'elevenlabs' && $elevenLabs->isConfigured();
-                        if ($useElevenLabs) {
-                            try {
-                                $result = $elevenLabs->textToSpeechWithTiming($description, $prefix.'-voice', $project->id);
-                                $update = ['voice_url' => $result['audio_path']];
-                                if (! empty($result['caption_path'])) {
-                                    $update['caption_url'] = $result['caption_path'];
-                                }
-                                $this->updateScene($scene->id, $update);
-                            } catch (Throwable $e) {
-                                $path = $elevenLabs->textToSpeech($description, $prefix.'-voice', $project->id);
-                                $this->updateScene($scene->id, ['voice_url' => $path]);
-                            }
-                        } else {
-                            $path = $ai->generateSceneVoice($description, $prefix.'-voice', $project->id);
-                            $this->updateScene($scene->id, ['voice_url' => $path]);
+                        $this->updateScene($scene->id, ['status' => 'generating_voice']);
+                        $voice = $mediaGenerator->generateVoice($scene, $project, $prefix.'-voice', $description);
+                        $update = ['voice_url' => $voice['voice_url']];
+                        if (! empty($voice['caption_url'])) {
+                            $update['caption_url'] = $voice['caption_url'];
                         }
+                        $this->updateScene($scene->id, $update);
+                        $this->refreshSceneStatus($scene->id);
                     } catch (Throwable $e) {
                         Log::warning('GenerateProjectSceneMediaJob: scene voice failed', [
                             'scene_id' => $scene->id,
                             'error' => $e->getMessage(),
                         ]);
+                        $this->updateScene($scene->id, ['status' => 'voice_failed']);
                     }
+                }
+
+                if (! $needsImage && ! $needsVoice) {
+                    $this->refreshSceneStatus($scene->id);
                 }
             }
 
             $project = Project::find($this->projectId);
             if ($project) {
-                $project->update(['status' => ProjectStatus::Ready]);
+                $pipeline->syncProjectStatus($project);
                 $project->load('user');
-                if ($project->user) {
+                if ($project->status === ProjectStatus::Ready && $project->user) {
                     app(\App\Services\NotificationService::class)->sendProjectStepCompleted(
                         $project->user,
                         $project,
@@ -197,6 +223,24 @@ class GenerateProjectSceneMediaJob implements ShouldQueue
             if ($e->getCode() !== '23000' && ! str_contains($e->getMessage(), 'foreign key constraint')) {
                 throw $e;
             }
+        }
+    }
+
+    private function refreshSceneStatus(int $sceneId): void
+    {
+        $scene = \App\Models\Scene::find($sceneId);
+        if (! $scene) {
+            return;
+        }
+
+        if (filled($scene->image_url) && filled($scene->voice_url)) {
+            $scene->update(['status' => 'ready']);
+
+            return;
+        }
+
+        if (filled($scene->image_url) || filled($scene->voice_url)) {
+            $scene->update(['status' => 'partial_media']);
         }
     }
 

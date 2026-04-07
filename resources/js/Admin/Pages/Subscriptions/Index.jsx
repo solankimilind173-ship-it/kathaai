@@ -76,10 +76,14 @@ export default function AdminSubscriptionsIndex({ plans, filters }) {
     return (
         <AdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
-                    Subscriptions
+                <h2 className="text-xl font-semibold leading-tight text-white">
+                    Plans
                 </h2>
             }
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Plans' },
+            ]}
         >
             <Head title="Admin – Subscriptions" />
 

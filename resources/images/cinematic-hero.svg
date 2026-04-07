@@ -1,0 +1,41 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="1200" fill="#0A1220"/>
+  <g opacity="0.9">
+    <ellipse cx="1287" cy="178" rx="298" ry="244" fill="#F97316"/>
+    <ellipse cx="1271" cy="210" rx="388" ry="322" fill="url(#paint0_radial)"/>
+  </g>
+  <g opacity="0.72">
+    <ellipse cx="363" cy="1000" rx="530" ry="281" fill="url(#paint1_radial)"/>
+    <ellipse cx="152" cy="912" rx="260" ry="212" fill="#7C3AED"/>
+  </g>
+  <path d="M0 980C166 912 303 861 441 827C650 775 844 766 1010 790C1178 815 1351 886 1600 1043V1200H0V980Z" fill="url(#paint2_linear)"/>
+  <g opacity="0.22">
+    <path d="M154 737C257 640 394 584 525 558C676 529 845 549 962 622C1111 714 1157 886 1273 963" stroke="#FDE68A" stroke-width="3" stroke-linecap="round"/>
+    <path d="M257 668C359 593 484 558 600 555C772 551 933 613 1021 711" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.18">
+    <circle cx="1130" cy="306" r="4" fill="white"/>
+    <circle cx="1031" cy="240" r="3" fill="white"/>
+    <circle cx="1179" cy="163" r="3" fill="white"/>
+    <circle cx="293" cy="228" r="4" fill="#FDE68A"/>
+    <circle cx="342" cy="280" r="2.5" fill="white"/>
+    <circle cx="398" cy="183" r="2.5" fill="#FB7185"/>
+  </g>
+  <defs>
+    <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1271 210) rotate(90) scale(322 388)">
+      <stop stop-color="#FDBA74"/>
+      <stop offset="0.38" stop-color="#FB7185"/>
+      <stop offset="1" stop-color="#0A1220" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="paint1_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(363 1000) rotate(90) scale(281 530)">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="0.45" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#0A1220" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paint2_linear" x1="800" y1="790" x2="800" y2="1200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A" stop-opacity="0"/>
+      <stop offset="0.52" stop-color="#08111D" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#050B14"/>
+    </linearGradient>
+  </defs>
+</svg>

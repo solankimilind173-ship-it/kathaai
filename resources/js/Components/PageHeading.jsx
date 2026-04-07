@@ -1,16 +1,21 @@
 export default function PageHeading({ title, description, action, className = '' }) {
     return (
-        <div className={`mb-6 animate-fade-in ${className}`}>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`fade-rise mb-8 ${className}`}>
+            <div className="cinematic-hero-card cinematic-spotlight rounded-[1.75rem] p-6 sm:p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="font-display text-2xl font-bold tracking-tight text-stone-800 sm:text-3xl">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.32em] text-amber-300/90">
+                        KathaAI Studio
+                    </p>
+                    <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
                         {title}
                     </h1>
                     {description && (
-                        <p className="mt-1 text-sm text-stone-600">{description}</p>
+                        <p className="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">{description}</p>
                     )}
                 </div>
                 {action && <div className="shrink-0">{action}</div>}
+                </div>
             </div>
         </div>
     );

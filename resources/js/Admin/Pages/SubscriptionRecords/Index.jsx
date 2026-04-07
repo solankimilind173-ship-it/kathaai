@@ -49,7 +49,7 @@ export default function AdminSubscriptionRecordsIndex({ subscriptions, plans = [
 
     return (
         <AdminLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Subscription records</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Subscription records</h2>}
             breadcrumbs={[
                 { label: 'Admin', href: route('admin.dashboard') },
                 { label: 'Subscription records' },

@@ -9,6 +9,7 @@ export default function useOnboarding() {
         () => ({
             status: raw?.status ?? 'not_started',
             last_step: raw?.last_step ?? null,
+            demo_project_eligible: raw?.demo_project_eligible ?? false,
         }),
         [raw]
     );
@@ -43,4 +44,3 @@ export default function useOnboarding() {
         isCompleted: onboarding.status === 'completed',
     };
 }
-

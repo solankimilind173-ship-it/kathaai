@@ -24,22 +24,33 @@ export default function Login({ status, canResetPassword }) {
     };
 
     const googleUrl = route('auth.socialite.redirect', { provider: 'google' });
-    const appleUrl = route('auth.socialite.redirect', { provider: 'apple' });
 
     return (
-        <GuestLayout>
+        <GuestLayout tone="auth">
             <Head title="Log in" />
 
+            <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-600">
+                    Welcome back
+                </p>
+                <h1 className="mt-3 font-display text-4xl text-stone-900">
+                    Enter the studio
+                </h1>
+                <p className="mt-3 text-sm leading-7 text-stone-600">
+                    Sign in to continue building cinematic videos from your written stories.
+                </p>
+            </div>
+
             {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
+                <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
                     {status}
                 </div>
             )}
 
-            <div className="mb-6 flex flex-col gap-3">
+            <div className="mt-8 space-y-4">
                 <a
                     href={googleUrl}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200/60 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-amber-50/50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
+                    className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
                 >
                     <svg className="h-5 w-5" viewBox="0 0 24 24">
                         <path
@@ -61,116 +72,96 @@ export default function Login({ status, canResetPassword }) {
                     </svg>
                     Continue with Google
                 </a>
-                {/* <a
-                    href={appleUrl}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-stone-800 bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
-                >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                    </svg>
-                    Sign in with Apple
-                </a> */}
-            </div>
 
-            <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-amber-200/50" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-stone-500">Or continue with email</span>
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-stone-200" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="bg-white px-3 text-stone-500">Or continue with email</span>
+                    </div>
                 </div>
             </div>
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} className="mt-8 space-y-5">
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
+                    <InputLabel htmlFor="email" value="Email" className="text-stone-700" />
                     <TextInput
                         id="email"
                         type="email"
                         name="email"
                         value={data.email}
-                        className="mt-1 block w-full"
+                        className="mt-2 block w-full rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-stone-900 shadow-sm focus:border-amber-400 focus:ring-amber-400"
                         autoComplete="username"
                         isFocused={true}
                         onChange={(e) => setData('email', e.target.value)}
                     />
-
                     <InputError message={errors.email} className="mt-2" />
                 </div>
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <div className="relative mt-1">
+                <div>
+                    <InputLabel htmlFor="password" value="Password" className="text-stone-700" />
+                    <div className="relative mt-2">
                         <TextInput
                             id="password"
                             type={showPassword ? 'text' : 'password'}
                             name="password"
                             value={data.password}
-                            className="block w-full pr-10"
+                            className="block w-full rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 pr-12 text-stone-900 shadow-sm focus:border-amber-400 focus:ring-amber-400"
                             autoComplete="current-password"
                             onChange={(e) => setData('password', e.target.value)}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword((v) => !v)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-stone-200 bg-white p-2 text-stone-500 hover:bg-stone-50 hover:text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
                             tabIndex={-1}
                             aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
                             {showPassword ? (
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                                 </svg>
                             ) : (
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
                             )}
                         </button>
                     </div>
-
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="mt-4 block">
+                <div className="flex items-center justify-between gap-3">
                     <label className="flex items-center">
                         <Checkbox
                             name="remember"
                             checked={data.remember}
-                            onChange={(e) =>
-                                setData('remember', e.target.checked)
-                            }
+                            onChange={(e) => setData('remember', e.target.checked)}
                         />
-                        <span className="ms-2 text-sm text-stone-600">
-                            Remember me
-                        </span>
+                        <span className="ms-2 text-sm text-stone-600">Remember me</span>
                     </label>
+
+                    {canResetPassword && (
+                        <Link
+                            href={route('password.request')}
+                            className="text-sm font-medium text-amber-700 hover:text-amber-800"
+                        >
+                            Forgot password?
+                        </Link>
+                    )}
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                        <Link
-                            href={route('register')}
-                            className="rounded-md text-sm text-amber-700 underline hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
-                        >
-                            Create an account
-                        </Link>
-                        {canResetPassword && (
-                            <Link
-                                href={route('password.request')}
-                                className="rounded-md text-sm text-amber-700 underline hover:text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
-                            >
-                                Forgot your password?
-                            </Link>
-                        )}
-                    </div>
+                <PrimaryButton disabled={processing} className="w-full">
+                    Log in
+                </PrimaryButton>
 
-                    <PrimaryButton disabled={processing}>
-                        Log in
-                    </PrimaryButton>
+                <div className="text-center text-sm text-stone-600">
+                    New to KathaAI?{' '}
+                    <Link href={route('register')} className="font-medium text-amber-700 hover:text-amber-800">
+                        Create an account
+                    </Link>
                 </div>
             </form>
         </GuestLayout>

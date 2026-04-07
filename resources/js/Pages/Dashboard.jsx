@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/Card';
 import Badge from '@/Components/Badge';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 import CreditsPieChart from '@/Components/CreditsPieChart';
 import SubscriptionModal from '@/Components/SubscriptionModal';
 import { Head, Link } from '@inertiajs/react';
@@ -32,7 +33,8 @@ export default function Dashboard({
 }) {
     const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
     const [tipsDismissed, setTipsDismissed] = useState(true);
-    const { onboarding, startTour, advance, completeTour, skipTour } = useOnboarding();
+    const [showOnboardingTour, setShowOnboardingTour] = useState(false);
+    const { onboarding, startTour, advance, skipTour } = useOnboarding();
 
     useEffect(() => {
         try {
@@ -43,9 +45,19 @@ export default function Dashboard({
     }, []);
 
     const showTips = !tipsDismissed && latestProjects.length < 3;
-    // Only show overlay when tour is in progress; don't block dashboard on first load
-    const showOnboardingTour = onboarding.status === 'in_progress' && latestProjects.length === 0;
-    const canStartOnboarding = onboarding.status === 'not_started' && latestProjects.length === 0;
+    const isFirstProjectJourney = latestProjects.length === 0 && onboarding.demo_project_eligible;
+    const canStartOnboarding = onboarding.status === 'not_started' && isFirstProjectJourney;
+
+    useEffect(() => {
+        if (canStartOnboarding) {
+            startTour();
+        }
+    }, [canStartOnboarding, startTour]);
+
+    useEffect(() => {
+        setShowOnboardingTour(onboarding.status === 'in_progress' && isFirstProjectJourney);
+    }, [onboarding.status, isFirstProjectJourney]);
+
     const dismissTips = () => {
         try {
             localStorage.setItem(TIPS_DISMISSED_KEY, '1');
@@ -64,8 +76,9 @@ export default function Dashboard({
 
     return (
         <AuthenticatedLayout
+            tone="studio"
             header={
-                <h2 className="text-xl font-semibold leading-tight">
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">
                     Dashboard
                 </h2>
             }
@@ -73,9 +86,76 @@ export default function Dashboard({
             <Head title="Dashboard" />
 
             <div className="space-y-8">
+                <section className="cinematic-hero-card cinematic-spotlight overflow-hidden rounded-[2rem] p-8 text-white">
+                    <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+                        <div className="fade-rise">
+                            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-200">Creator command center</p>
+                            <h1 className="mt-4 font-display text-4xl leading-tight sm:text-5xl">
+                                Build cinematic video stories from a single written idea.
+                            </h1>
+                            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                                Track project progress, credits, renders, and creative output from one studio dashboard designed for story-driven video generation.
+                            </p>
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                <Link href={route('projects.create')} data-tour-id="dashboard-create-project">
+                                    <PrimaryButton>Create new story</PrimaryButton>
+                                </Link>
+                                <Link href={route('projects.index')}>
+                                    <SecondaryButton>Browse projects</SecondaryButton>
+                                </Link>
+                            </div>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+                            <div className="rounded-[1.5rem] border border-white/10 bg-white/8 p-5 backdrop-blur-md">
+                                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Projects</p>
+                                <p className="mt-3 font-display text-3xl text-white">{analytics.projects_created ?? 0}</p>
+                                <p className="mt-2 text-sm text-slate-300">Stories currently moving through your pipeline.</p>
+                            </div>
+                            <div className="rounded-[1.5rem] border border-white/10 bg-white/8 p-5 backdrop-blur-md">
+                                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Credits available</p>
+                                <p className="mt-3 font-display text-3xl text-white">{analytics.credits_allowance ?? 0}</p>
+                                <p className="mt-2 text-sm text-slate-300">Monthly capacity for image, voice, and render generation.</p>
+                            </div>
+                            <div className="rounded-[1.5rem] border border-white/10 bg-white/8 p-5 backdrop-blur-md">
+                                <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Videos generated</p>
+                                <p className="mt-3 font-display text-3xl text-white">{analytics.videos_generated ?? 0}</p>
+                                <p className="mt-2 text-sm text-slate-300">Finished outputs ready to review and share.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {isFirstProjectJourney && (
+                    <Card className="border-amber-300/40 bg-amber-50/90">
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">First project guide</p>
+                                <h3 className="mt-2 font-display text-2xl text-stone-900">Your first demo project is free.</h3>
+                                <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-600">
+                                    We will walk every new creator through one guided demo project so you can see the full story-to-cinema flow before spending credits.
+                                </p>
+                            </div>
+                            <div className="grid gap-2 text-sm text-stone-700 sm:grid-cols-3">
+                                <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-3">
+                                    <p className="font-semibold text-stone-900">1. Start</p>
+                                    <p className="mt-1">Create a story project from a book or pasted story.</p>
+                                </div>
+                                <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-3">
+                                    <p className="font-semibold text-stone-900">2. Review</p>
+                                    <p className="mt-1">Let KathaAI break the story into episodes and scenes.</p>
+                                </div>
+                                <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-3">
+                                    <p className="font-semibold text-stone-900">3. Continue</p>
+                                    <p className="mt-1">Open the new project and keep moving toward your first render.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Getting started tips */}
                 {showTips && (
-                    <Card className="border-amber-300/40 bg-amber-50/60 relative">
+                    <Card className="relative border-amber-300/40 bg-amber-50/85">
                         <button
                             type="button"
                             onClick={dismissTips}
@@ -109,13 +189,13 @@ export default function Dashboard({
                 )}
 
                 {/* Analytics */}
-                <section>
-                    <h3 className="font-display mb-4 text-lg font-semibold text-stone-800">
+                <section className="fade-rise">
+                    <h3 className="mb-4 font-display text-lg font-semibold text-white">
                         Your analytics
                     </h3>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {statCards.map(({ key, label, icon, description }) => (
-                            <Card key={key} className="animate-fade-in border-amber-200/20">
+                            <Card key={key} className="fade-rise border-white/40">
                                 <div className="flex items-start justify-between">
                                     <div>
                                         <p className="text-xs font-medium uppercase tracking-wider text-amber-600">
@@ -135,7 +215,7 @@ export default function Dashboard({
                     </div>
 
                     {/* Credits used - pie chart */}
-                    <Card className="mt-4 border-amber-200/20">
+                    <Card className="mt-4 border-white/40">
                         <p className="mb-4 text-xs font-medium uppercase tracking-wider text-amber-600">
                             Credits used
                         </p>
@@ -149,7 +229,7 @@ export default function Dashboard({
 
                 {/* Subscription CTA when not subscribed */}
                 {!hasSubscription && (
-                    <Card className="border-amber-300/30 bg-amber-50/80">
+                    <Card className="border-amber-300/30 bg-amber-50/90">
                         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                             <div>
                                 <h3 className="font-display text-lg font-semibold text-stone-900">
@@ -168,7 +248,7 @@ export default function Dashboard({
 
                 {/* Current plan when subscribed */}
                 {hasSubscription && plan && (
-                    <Card className="border-amber-200/30">
+                    <Card className="border-white/40">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-xs font-medium uppercase tracking-wider text-amber-600">
@@ -189,9 +269,9 @@ export default function Dashboard({
                 )}
 
                 {/* Latest projects */}
-                <section>
+                <section className="fade-rise">
                     <div className="mb-4 flex items-center justify-between">
-                        <h3 className="font-display text-lg font-semibold text-stone-800">
+                        <h3 className="font-display text-lg font-semibold text-white">
                             Latest projects
                         </h3>
                         <Link
@@ -253,8 +333,13 @@ export default function Dashboard({
                 <OnboardingTour
                     open={showOnboardingTour}
                     steps={onboardingSteps}
-                    onClose={skipTour}
-                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onClose={() => {
+                        setShowOnboardingTour(false);
+                        skipTour();
+                    }}
+                    onFinish={() => {
+                        setShowOnboardingTour(false);
+                    }}
                     onAdvance={(stepId) => advance(stepId)}
                 />
             )}

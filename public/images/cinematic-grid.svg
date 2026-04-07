@@ -1,0 +1,26 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="1200" fill="#07111F"/>
+  <g opacity="0.2">
+    <path d="M0 200H1200" stroke="#F8FAFC"/>
+    <path d="M0 400H1200" stroke="#F8FAFC"/>
+    <path d="M0 600H1200" stroke="#F8FAFC"/>
+    <path d="M0 800H1200" stroke="#F8FAFC"/>
+    <path d="M0 1000H1200" stroke="#F8FAFC"/>
+    <path d="M200 0V1200" stroke="#F8FAFC"/>
+    <path d="M400 0V1200" stroke="#F8FAFC"/>
+    <path d="M600 0V1200" stroke="#F8FAFC"/>
+    <path d="M800 0V1200" stroke="#F8FAFC"/>
+    <path d="M1000 0V1200" stroke="#F8FAFC"/>
+  </g>
+  <g opacity="0.55" filter="url(#filter0_f)">
+    <ellipse cx="930" cy="288" rx="176" ry="169" fill="#F97316"/>
+    <ellipse cx="267" cy="941" rx="227" ry="172" fill="#06B6D4"/>
+  </g>
+  <defs>
+    <filter id="filter0_f" x="-60" y="-1" width="1246" height="1232" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="50" result="effect1_foregroundBlur"/>
+    </filter>
+  </defs>
+</svg>

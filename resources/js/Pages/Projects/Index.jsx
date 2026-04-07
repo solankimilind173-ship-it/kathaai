@@ -40,7 +40,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
     const statusLabelMap = useMemo(() => Object.fromEntries(statusOptions.map((o) => [o.value, o.label])), [statusOptions]);
 
     const [deleteConfirm, setDeleteConfirm] = useState(null);
-    const { onboarding, startTour, advance, completeTour, skipTour } = useOnboarding();
+    const { onboarding, startTour, advance, skipTour } = useOnboarding();
 
     const { data, setData, get } = useForm({
         archived: filters.archived ?? false,
@@ -121,8 +121,9 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
 
     return (
         <AuthenticatedLayout
+            tone="projects"
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">Projects</h2>
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">Projects</h2>
             }
         >
             <Head title="My Projects" />
@@ -145,18 +146,44 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                         }
                     />
 
+                    <div className="cinematic-hero-card mb-6 rounded-[1.75rem] p-6 text-white">
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-200">Story library</p>
+                                <h2 className="mt-3 font-display text-3xl sm:text-4xl">Organize every story like a production slate.</h2>
+                                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                                    Filter active and archived projects, jump into scene editing, and keep the cinematic pipeline moving without losing track of credits or render status.
+                                </p>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="rounded-[1.25rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-md">
+                                    <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Total</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{projects.total ?? items.length}</p>
+                                </div>
+                                <div className="rounded-[1.25rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-md">
+                                    <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Active view</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{showArchived ? 'Archived' : 'Live'}</p>
+                                </div>
+                                <div className="rounded-[1.25rem] border border-white/10 bg-white/8 px-4 py-4 backdrop-blur-md">
+                                    <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Filters</p>
+                                    <p className="mt-2 font-display text-2xl text-white">{hasFilters ? 'On' : 'Off'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="mb-4 flex gap-2">
                         <button
                             type="button"
                             onClick={() => router.get(route('projects.index'), { ...filters, archived: false }, { preserveState: true })}
-                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${!showArchived ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                            className={`rounded-full border px-4 py-2 text-sm font-medium ${!showArchived ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-white/20 bg-white/10 text-white hover:bg-white/15'}`}
                         >
                             Active
                         </button>
                         <button
                             type="button"
                             onClick={() => router.get(route('projects.index'), { ...filters, archived: true }, { preserveState: true })}
-                            className={`rounded-lg border px-4 py-2 text-sm font-medium ${showArchived ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                            className={`rounded-full border px-4 py-2 text-sm font-medium ${showArchived ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-white/20 bg-white/10 text-white hover:bg-white/15'}`}
                         >
                             Archived
                         </button>
@@ -252,7 +279,7 @@ export default function Index({ projects, filters = {}, statusOptions = [] }) {
                             <Card className="overflow-hidden p-0">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
+                                        <thead className="bg-white/70">
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                                     <button

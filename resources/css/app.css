@@ -1,46 +1,388 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Figtree:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@300..800&family=Space+Grotesk:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Global font rendering: crisp, consistent text across the project */
 @layer base {
+    :root {
+        --kathaai-ink: #09111f;
+        --kathaai-deep: #0f1b32;
+        --kathaai-surface: rgba(8, 15, 28, 0.68);
+        --kathaai-surface-strong: rgba(8, 15, 28, 0.84);
+        --kathaai-line: rgba(255, 255, 255, 0.12);
+        --kathaai-gold: #f59e0b;
+        --kathaai-orange: #f97316;
+        --kathaai-rose: #fb7185;
+        --kathaai-cyan: #22d3ee;
+        --kathaai-text: #ecf4ff;
+        --kathaai-muted: #a4b2ca;
+        --kathaai-panel-shadow: 0 22px 80px rgba(3, 8, 17, 0.28);
+        --page-glow-a: rgba(249, 115, 22, 0.16);
+        --page-glow-b: rgba(34, 211, 238, 0.12);
+        --page-shell-top: rgba(249, 115, 22, 0.18);
+        --page-shell-bottom: rgba(34, 211, 238, 0.12);
+        --page-shell-orb-a: rgba(251, 191, 36, 0.1);
+        --page-shell-orb-b: rgba(251, 113, 133, 0.12);
+        --page-shell-orb-c: rgba(34, 211, 238, 0.08);
+        --page-header-bg: rgba(2, 6, 16, 0.48);
+        --page-header-line: rgba(255, 255, 255, 0.08);
+    }
+
     html {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        scroll-behavior: smooth;
         text-rendering: optimizeLegibility;
     }
+
     body {
-        font-feature-settings: "kern" 1, "liga" 1;
-        /* Slightly improve legibility for small text */
-        font-optical-sizing: auto;
+        min-height: 100vh;
         overflow-x: hidden;
+        font-family: 'Manrope', system-ui, sans-serif;
+        background:
+            radial-gradient(circle at top, var(--page-glow-a), transparent 28%),
+            radial-gradient(circle at bottom left, var(--page-glow-b), transparent 24%),
+            linear-gradient(180deg, #09111f 0%, #0c1727 35%, #07101d 100%);
+        color: var(--kathaai-text);
+        font-feature-settings: "kern" 1, "liga" 1;
+        font-optical-sizing: auto;
     }
-    /* Avoid thin or blurry text on light backgrounds */
-    p, span, li, dd, dt {
+
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 44%),
+            url('../images/cinematic-grain.svg');
+        opacity: 0.75;
+        pointer-events: none;
+    }
+
+    a,
+    button {
+        transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+        transition-duration: 220ms;
+        transition-timing-function: ease;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        font: inherit;
+    }
+
+    p,
+    span,
+    li,
+    dd,
+    dt {
         letter-spacing: 0.01em;
     }
 }
 
 @layer components {
-    /* Light Bollywood theme: light overlay over movie collage background */
-    .bollywood-bg {
-        background-image:
-            linear-gradient(135deg, rgba(254, 247, 237, 0.94) 0%, rgba(255, 251, 235, 0.92) 50%, rgba(255, 242, 232, 0.93) 100%),
-            url('/images/bollywood-bg.jpg');
+    .cinematic-shell {
+        position: relative;
+        isolation: isolate;
+        min-height: 100vh;
+        background:
+            linear-gradient(180deg, rgba(4, 10, 20, 0.36), rgba(4, 10, 20, 0.88)),
+            url('../images/cinematic-hero.svg');
+        background-size: cover;
+        background-position: center top;
+    }
+
+    .cinematic-shell::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background:
+            radial-gradient(circle at top right, var(--page-shell-top), transparent 26%),
+            radial-gradient(circle at bottom left, var(--page-shell-bottom), transparent 22%),
+            url('../images/cinematic-grid.svg');
         background-size: cover;
         background-position: center;
-        background-attachment: fixed;
+        mix-blend-mode: screen;
+        opacity: 0.42;
+        pointer-events: none;
     }
-    .bollywood-bg-fallback {
-        background: linear-gradient(135deg, #fef7ed 0%, #fff7ed 40%, #ffedd5 70%, #fef3c7 100%);
-        background-attachment: fixed;
+
+    .cinematic-shell::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background:
+            radial-gradient(circle at 20% 20%, var(--page-shell-orb-a), transparent 18%),
+            radial-gradient(circle at 80% 14%, var(--page-shell-orb-b), transparent 18%),
+            radial-gradient(circle at 60% 80%, var(--page-shell-orb-c), transparent 16%);
+        filter: blur(8px);
+        animation: cinematicPulse 16s ease-in-out infinite alternate;
+        pointer-events: none;
     }
+
+    .page-header-bar {
+        border-bottom: 1px solid var(--page-header-line);
+        background: var(--page-header-bg);
+        backdrop-filter: blur(18px);
+    }
+
+    .page-tone-welcome {
+        --page-glow-a: rgba(245, 158, 11, 0.18);
+        --page-glow-b: rgba(244, 114, 182, 0.14);
+        --page-shell-top: rgba(251, 191, 36, 0.2);
+        --page-shell-bottom: rgba(244, 114, 182, 0.12);
+        --page-shell-orb-a: rgba(251, 191, 36, 0.14);
+        --page-shell-orb-b: rgba(244, 114, 182, 0.14);
+        --page-shell-orb-c: rgba(56, 189, 248, 0.08);
+        --page-header-bg: rgba(26, 10, 18, 0.48);
+    }
+
+    .page-tone-auth {
+        --page-glow-a: rgba(59, 130, 246, 0.16);
+        --page-glow-b: rgba(245, 158, 11, 0.12);
+        --page-shell-top: rgba(96, 165, 250, 0.16);
+        --page-shell-bottom: rgba(251, 191, 36, 0.1);
+        --page-shell-orb-a: rgba(96, 165, 250, 0.12);
+        --page-shell-orb-b: rgba(250, 204, 21, 0.12);
+        --page-shell-orb-c: rgba(45, 212, 191, 0.08);
+        --page-header-bg: rgba(9, 18, 34, 0.56);
+    }
+
+    .page-tone-studio {
+        --page-glow-a: rgba(16, 185, 129, 0.14);
+        --page-glow-b: rgba(56, 189, 248, 0.14);
+        --page-shell-top: rgba(20, 184, 166, 0.18);
+        --page-shell-bottom: rgba(56, 189, 248, 0.12);
+        --page-shell-orb-a: rgba(45, 212, 191, 0.12);
+        --page-shell-orb-b: rgba(56, 189, 248, 0.12);
+        --page-shell-orb-c: rgba(251, 191, 36, 0.07);
+        --page-header-bg: rgba(4, 24, 28, 0.48);
+    }
+
+    .page-tone-projects {
+        --page-glow-a: rgba(249, 115, 22, 0.18);
+        --page-glow-b: rgba(34, 197, 94, 0.1);
+        --page-shell-top: rgba(251, 146, 60, 0.18);
+        --page-shell-bottom: rgba(16, 185, 129, 0.1);
+        --page-shell-orb-a: rgba(251, 146, 60, 0.12);
+        --page-shell-orb-b: rgba(74, 222, 128, 0.1);
+        --page-shell-orb-c: rgba(56, 189, 248, 0.06);
+        --page-header-bg: rgba(28, 14, 8, 0.5);
+    }
+
+    .page-tone-gallery {
+        --page-glow-a: rgba(34, 211, 238, 0.16);
+        --page-glow-b: rgba(59, 130, 246, 0.12);
+        --page-shell-top: rgba(34, 211, 238, 0.18);
+        --page-shell-bottom: rgba(59, 130, 246, 0.1);
+        --page-shell-orb-a: rgba(34, 211, 238, 0.12);
+        --page-shell-orb-b: rgba(96, 165, 250, 0.12);
+        --page-shell-orb-c: rgba(14, 165, 233, 0.08);
+        --page-header-bg: rgba(6, 18, 34, 0.5);
+    }
+
+    .page-tone-billing {
+        --page-glow-a: rgba(16, 185, 129, 0.16);
+        --page-glow-b: rgba(20, 184, 166, 0.12);
+        --page-shell-top: rgba(52, 211, 153, 0.18);
+        --page-shell-bottom: rgba(45, 212, 191, 0.1);
+        --page-shell-orb-a: rgba(52, 211, 153, 0.12);
+        --page-shell-orb-b: rgba(45, 212, 191, 0.12);
+        --page-shell-orb-c: rgba(250, 204, 21, 0.05);
+        --page-header-bg: rgba(5, 24, 19, 0.52);
+    }
+
+    .page-tone-upgrade {
+        --page-glow-a: rgba(250, 204, 21, 0.18);
+        --page-glow-b: rgba(248, 113, 113, 0.12);
+        --page-shell-top: rgba(250, 204, 21, 0.22);
+        --page-shell-bottom: rgba(248, 113, 113, 0.1);
+        --page-shell-orb-a: rgba(250, 204, 21, 0.14);
+        --page-shell-orb-b: rgba(251, 146, 60, 0.12);
+        --page-shell-orb-c: rgba(248, 113, 113, 0.08);
+        --page-header-bg: rgba(34, 20, 6, 0.5);
+    }
+
+    .page-tone-help {
+        --page-glow-a: rgba(125, 211, 252, 0.14);
+        --page-glow-b: rgba(250, 204, 21, 0.1);
+        --page-shell-top: rgba(125, 211, 252, 0.16);
+        --page-shell-bottom: rgba(250, 204, 21, 0.1);
+        --page-shell-orb-a: rgba(56, 189, 248, 0.12);
+        --page-shell-orb-b: rgba(250, 204, 21, 0.1);
+        --page-shell-orb-c: rgba(45, 212, 191, 0.06);
+        --page-header-bg: rgba(9, 20, 32, 0.5);
+    }
+
+    .page-tone-settings {
+        --page-glow-a: rgba(148, 163, 184, 0.16);
+        --page-glow-b: rgba(74, 222, 128, 0.1);
+        --page-shell-top: rgba(148, 163, 184, 0.16);
+        --page-shell-bottom: rgba(74, 222, 128, 0.08);
+        --page-shell-orb-a: rgba(148, 163, 184, 0.12);
+        --page-shell-orb-b: rgba(74, 222, 128, 0.08);
+        --page-shell-orb-c: rgba(125, 211, 252, 0.06);
+        --page-header-bg: rgba(12, 18, 28, 0.56);
+    }
+
+    .page-tone-profile {
+        --page-glow-a: rgba(251, 146, 60, 0.14);
+        --page-glow-b: rgba(45, 212, 191, 0.1);
+        --page-shell-top: rgba(251, 146, 60, 0.16);
+        --page-shell-bottom: rgba(45, 212, 191, 0.08);
+        --page-shell-orb-a: rgba(251, 146, 60, 0.1);
+        --page-shell-orb-b: rgba(45, 212, 191, 0.1);
+        --page-shell-orb-c: rgba(96, 165, 250, 0.06);
+        --page-header-bg: rgba(30, 16, 8, 0.5);
+    }
+
+    .cinematic-hero-card {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background:
+            linear-gradient(155deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+            rgba(8, 15, 28, 0.6);
+        box-shadow: var(--kathaai-panel-shadow);
+        backdrop-filter: blur(18px);
+    }
+
     .glass-panel {
-        @apply rounded-xl border border-amber-200/50 bg-white/95 shadow-lg shadow-amber-900/5 backdrop-blur-sm;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 247, 237, 0.88)),
+            rgba(255, 255, 255, 0.84);
+        box-shadow: 0 20px 60px rgba(1, 6, 14, 0.18);
+        backdrop-filter: blur(18px);
     }
+
     .glass-panel-light {
-        @apply rounded-xl border border-amber-200/30 bg-white shadow-md shadow-amber-900/5;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 255, 0.88)),
+            rgba(255, 255, 255, 0.86);
+        box-shadow: 0 22px 60px rgba(1, 6, 14, 0.16);
+        backdrop-filter: blur(18px);
+    }
+
+    .cinematic-chip {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.06);
+        color: #f8fafc;
+        backdrop-filter: blur(16px);
+    }
+
+    .cinematic-section {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 249, 242, 0.7)),
+            rgba(255, 255, 255, 0.72);
+        box-shadow: 0 18px 60px rgba(1, 6, 14, 0.16);
+    }
+
+    .cinematic-section::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+        transform: translateX(-100%);
+        animation: sweepLight 8s linear infinite;
+        pointer-events: none;
+    }
+
+    .cinematic-spotlight {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cinematic-spotlight::after {
+        content: "";
+        position: absolute;
+        inset: -20%;
+        background: radial-gradient(circle at var(--spot-x, 50%) var(--spot-y, 0%), rgba(245, 158, 11, 0.16), transparent 28%);
+        opacity: 0.8;
+        pointer-events: none;
+    }
+
+    .page-grid {
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 32px 32px;
+        background-position: center;
+    }
+
+    .float-soft {
+        animation: floatSoft 8s ease-in-out infinite;
+    }
+
+    .float-soft-delay {
+        animation: floatSoft 10s ease-in-out infinite;
+        animation-delay: -2s;
+    }
+
+    .fade-rise {
+        animation: fadeRise 0.7s ease both;
+    }
+
+    .stagger-1 { animation-delay: 80ms; }
+    .stagger-2 { animation-delay: 160ms; }
+    .stagger-3 { animation-delay: 240ms; }
+}
+
+@layer utilities {
+    .text-kathaai-muted {
+        color: var(--kathaai-muted);
+    }
+
+    .text-kathaai-bright {
+        color: var(--kathaai-text);
+    }
+}
+
+@keyframes floatSoft {
+    0%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    50% {
+        transform: translate3d(0, -10px, 0);
+    }
+}
+
+@keyframes cinematicPulse {
+    0% {
+        transform: scale(1) translateY(0);
+        opacity: 0.82;
+    }
+    100% {
+        transform: scale(1.06) translateY(-12px);
+        opacity: 1;
+    }
+}
+
+@keyframes sweepLight {
+    0% {
+        transform: translateX(-100%);
+    }
+    50%,
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes fadeRise {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 18px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
     }
 }

@@ -32,7 +32,7 @@ export default function AdminFailedJobsIndex({ jobs = [], total = 0, links }) {
 
     return (
         <AdminLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Failed jobs</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Failed jobs</h2>}
             breadcrumbs={[
                 { label: 'Admin', href: route('admin.dashboard') },
                 { label: 'Failed jobs' },

@@ -3,10 +3,10 @@ export default function Card({ className = '', padding = true, variant = 'glass'
     return (
         <div
             className={
-                `overflow-hidden shadow-xl sm:rounded-xl transition-all duration-300 ${
+                `cinematic-section overflow-hidden text-stone-900 shadow-xl sm:rounded-[1.5rem] transition-all duration-300 hover:-translate-y-0.5 ${
                     isGlass
-                        ? 'glass-panel-light border-amber-200/30'
-                        : 'bg-white border border-gray-200'
+                        ? 'glass-panel-light'
+                        : 'border border-white/30 bg-white/90'
                 } ${padding ? 'p-6' : ''} ` + className
             }
             {...props}
@@ -18,7 +18,7 @@ export default function Card({ className = '', padding = true, variant = 'glass'
 
 Card.Header = function CardHeader({ className = '', children, ...props }) {
     return (
-        <div className={`border-b border-amber-200/20 pb-4 mb-4 ${className}`} {...props}>
+        <div className={`mb-4 border-b border-white/10 pb-4 ${className}`} {...props}>
             {children}
         </div>
     );
@@ -34,7 +34,7 @@ Card.Title = function CardTitle({ className = '', children, ...props }) {
 
 Card.Body = function CardBody({ className = '', children, ...props }) {
     return (
-        <div className={`text-gray-700 ${className}`} {...props}>
+        <div className={`text-stone-700 ${className}`} {...props}>
             {children}
         </div>
     );
@@ -42,7 +42,7 @@ Card.Body = function CardBody({ className = '', children, ...props }) {
 
 Card.Footer = function CardFooter({ className = '', children, ...props }) {
     return (
-        <div className={`border-t border-gray-200 pt-4 mt-4 flex items-center gap-3 ${className}`} {...props}>
+        <div className={`mt-4 flex items-center gap-3 border-t border-white/10 pt-4 ${className}`} {...props}>
             {children}
         </div>
     );

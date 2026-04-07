@@ -13,8 +13,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
-                display: ['Cinzel', 'Georgia', 'serif'],
+                sans: ['Manrope', ...defaultTheme.fontFamily.sans],
+                display: ['Cormorant Garamond', 'Georgia', 'serif'],
+                ui: ['Space Grotesk', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 bollywood: {

@@ -94,7 +94,7 @@ export default function AdminUsersIndex({ users, filters }) {
 
     return (
         <AdminLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Users</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Users</h2>}
             breadcrumbs={[
                 { label: 'Admin', href: route('admin.dashboard') },
                 { label: 'Users' },

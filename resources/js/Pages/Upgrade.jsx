@@ -30,8 +30,9 @@ export default function Upgrade({ plans = [], currentPlan = null, yearlyDiscount
 
     return (
         <AuthenticatedLayout
+            tone="upgrade"
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">
                     Upgrade your plan
                 </h2>
             }
@@ -167,7 +168,7 @@ export default function Upgrade({ plans = [], currentPlan = null, yearlyDiscount
                                         {Boolean(plan.allow_trailer_generation) && (
                                             <li className="flex items-center gap-2 text-sm text-stone-700">
                                                 <CheckIcon className="h-4 w-4 shrink-0 text-amber-500" />
-                                                Trailer generation (>= 1h project)
+                                                Trailer generation ({'>= 1h project'})
                                             </li>
                                         )}
                                         {Boolean(plan.allow_background_music) && (

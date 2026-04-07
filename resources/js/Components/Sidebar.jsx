@@ -13,14 +13,6 @@ const userNavItems = [
     { href: 'help.index', label: 'Help', icon: HelpIcon },
 ];
 
-function LogIcon({ className = 'h-5 w-5' }) {
-    return (
-        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-        </svg>
-    );
-}
-
 function QueueIcon({ className = 'h-5 w-5' }) {
     return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -38,7 +30,6 @@ const adminNavItems = [
     { href: 'admin.notifications.index', label: 'Notifications', icon: NotificationIcon },
     { href: 'admin.analytics.index', label: 'Analytics', icon: AnalyticsIcon },
     { href: 'admin.failed-jobs.index', label: 'Failed jobs', icon: QueueIcon },
-    { href: 'admin.logs.index', label: 'Logs', icon: LogIcon },
 ];
 
 function DashboardIcon({ className = 'h-5 w-5' }) {
@@ -166,7 +157,6 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
         if (routeName === 'admin.notifications.index') return url.startsWith('/admin/notifications');
         if (routeName === 'admin.analytics.index') return url.startsWith('/admin/analytics');
         if (routeName === 'admin.failed-jobs.index') return url.startsWith('/admin/failed-jobs');
-        if (routeName === 'admin.logs.index') return url.startsWith('/admin/logs');
         if (routeName === 'projects.index') return url.startsWith('/projects') && !url.startsWith('/admin');
         if (routeName === 'gallery.index') return url.startsWith('/gallery') && !url.startsWith('/video-gallery');
         if (routeName === 'video-gallery.index') return url.startsWith('/video-gallery');
@@ -178,15 +168,15 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
 
     return (
         <aside
-            className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-amber-200/60 bg-white/98 shadow-xl shadow-amber-900/5 backdrop-blur-xl transition-all duration-300 ease-in-out
+            className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-white/10 bg-slate-950/72 shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 ease-in-out
                 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
                 ${collapsed ? 'lg:w-[72px] w-64' : 'w-64'}`}
         >
-            <div className="flex h-16 shrink-0 items-center border-b border-amber-200/50 px-4">
+            <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-4">
                 <Link href="/" className="flex items-center gap-3 overflow-hidden">
                     <ApplicationLogo className="h-8 w-auto shrink-0" />
                     {!collapsed && (
-                        <span className="font-display text-lg font-semibold tracking-wide text-amber-900 truncate">
+                        <span className="font-display truncate text-lg font-semibold tracking-[0.28em] text-white">
                             KATHAAI
                         </span>
                     )}
@@ -196,13 +186,13 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
             <button
                 type="button"
                 onClick={handleCollapseToggle}
-                className="absolute -right-3 top-20 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-700 shadow-md transition-all hover:border-amber-400 hover:bg-amber-50"
+                className="absolute -right-3 top-20 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-slate-900 text-white shadow-lg transition-all hover:bg-slate-800"
                 aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
                 {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
             </button>
 
-            <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
                 {navItems.map((item) => {
                     const active = isActive(item.href);
                     const href = route(item.href);
@@ -213,48 +203,48 @@ export default function Sidebar({ mobileOpen = false, onNavigate, collapsed: con
                             onClick={handleLinkClick}
                             className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                                 active
-                                    ? 'bg-amber-100 text-amber-900 shadow-inner'
-                                    : 'text-stone-600 hover:bg-amber-50 hover:text-amber-800'
+                                    ? 'bg-gradient-to-r from-amber-400/22 to-rose-500/14 text-white shadow-inner shadow-black/10'
+                                    : 'text-slate-300 hover:bg-white/6 hover:text-white'
                             } ${collapsed ? 'justify-center px-2' : ''}`}
                         >
-                            <item.icon className={`h-5 w-5 shrink-0 ${active ? 'text-amber-700' : 'text-amber-600'}`} />
+                            <item.icon className={`h-5 w-5 shrink-0 ${active ? 'text-amber-300' : 'text-slate-400'}`} />
                             {!collapsed && <span>{item.label}</span>}
                         </Link>
                     );
                 })}
             </nav>
 
-            <div className={`border-t border-amber-200/50 p-3 ${collapsed ? 'flex justify-center' : ''}`}>
+            <div className={`border-t border-white/10 p-3 ${collapsed ? 'flex justify-center' : ''}`}>
                 <Menu as="div" className="relative">
                     <MenuButton
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-300 data-[active]:bg-amber-50 ${
+                        className={`flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/5 px-3 py-2.5 text-left text-sm transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-300 data-[active]:bg-white/10 ${
                             collapsed ? 'justify-center' : ''
                         }`}
                     >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200 text-sm font-semibold text-amber-900">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-rose-500 text-sm font-semibold text-slate-950">
                             {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         {!collapsed && (
                             <div className="min-w-0 flex-1 truncate">
-                                <p className="font-medium text-stone-800">{user?.name}</p>
-                                <p className="truncate text-xs text-stone-500">{user?.email}</p>
+                                <p className="font-medium text-white">{user?.name}</p>
+                                <p className="truncate text-xs text-slate-400">{user?.email}</p>
                             </div>
                         )}
                         {!collapsed && (
-                            <svg className="h-4 w-4 shrink-0 text-stone-400" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="h-4 w-4 shrink-0 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                             </svg>
                         )}
                     </MenuButton>
                     <MenuItems
                         anchor="bottom start"
-                        className="z-[101] mt-2 min-w-[12rem] origin-top-left rounded-lg border border-amber-200/50 bg-white py-1 shadow-xl focus:outline-none"
+                        className="z-[101] mt-2 min-w-[12rem] origin-top-left rounded-xl border border-white/10 bg-slate-950/95 py-1 shadow-2xl backdrop-blur-xl focus:outline-none"
                     >
                         {isAdmin && !url.startsWith('/admin') && (
                             <MenuItem>
                                 <Link
                                     href={route('admin.dashboard')}
-                                    className="block px-4 py-2 text-sm text-stone-700 data-[focus]:bg-amber-50"
+                                    className="block px-4 py-2 text-sm text-slate-200 data-[focus]:bg-white/10"
                                 >
                                     Admin
                                 </Link>

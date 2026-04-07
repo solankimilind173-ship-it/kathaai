@@ -93,10 +93,14 @@ export default function AdminProjectsIndex({
     return (
         <AdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="text-xl font-semibold leading-tight text-white">
                     Projects
                 </h2>
             }
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Projects' },
+            ]}
         >
             <Head title="Admin – Projects" />
 

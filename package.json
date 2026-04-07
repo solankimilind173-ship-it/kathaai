@@ -1,10 +1,13 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "kathaai",
+    "description": "Frontend assets for the KathaAI storytelling platform.",
     "private": true,
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "check": "vite build"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",

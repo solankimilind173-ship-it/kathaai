@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProjectStatus;
 use App\Enums\SourceType;
-use App\Jobs\GenerateProjectStructureJob;
 use App\Models\Book;
 use App\Models\Character;
 use App\Models\Episode;
@@ -17,6 +16,7 @@ use App\Models\SceneRenderSettings;
 use App\Services\CreditCalculator;
 use App\Services\CreditService;
 use App\Services\ProjectAnalyticsService;
+use App\Services\ProjectPipelineService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -75,7 +75,7 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function show(Project $project, CreditCalculator $creditCalculator, CreditService $creditService, ProjectAnalyticsService $projectAnalyticsService)
+    public function show(Project $project, CreditCalculator $creditCalculator, CreditService $creditService, ProjectAnalyticsService $projectAnalyticsService, ProjectPipelineService $pipelineService)
     {
         $project->loadCount(['episodes', 'characters', 'scenes']);
         $project->load([
@@ -107,6 +107,7 @@ class ProjectController extends Controller
         $shareUrl = $shareToken ? route('share.show', $shareToken->token) : null;
         $project->loadCount(['renderRunLogs as failed_render_count' => fn ($q) => $q->where('status', 'failed')]);
         $hasFailedRender = ($project->failed_render_count ?? 0) > 0;
+        $pipeline = $pipelineService->summarize($project);
 
         ProjectEngagement::incrementFor($project, 'view_count');
 
@@ -116,6 +117,7 @@ class ProjectController extends Controller
             'hasFailedRender' => $hasFailedRender,
             'plan' => $plan,
             'projectAnalytics' => $projectAnalytics,
+            'pipeline' => $pipeline,
             'estimatedCredits' => $estimatedCredits,
             'creditOptions' => [
                 'video_minutes' => $minutes,
@@ -220,7 +222,7 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function store(Request $request, CreditService $creditService)
+    public function store(Request $request, CreditService $creditService, ProjectPipelineService $pipelineService)
     {
         $user = auth()->user();
         $plan = $user->plan;
@@ -312,9 +314,7 @@ class ProjectController extends Controller
 
         $creditService->deductForSceneGeneration($user, $project);
 
-        $project->update(['status' => ProjectStatus::Generating]);
-
-        GenerateProjectStructureJob::dispatch($project);
+        $pipelineService->startGeneration($project);
 
         return redirect()->route('projects.index')->with('success', 'Project created. Scene generation has started.');
     }
@@ -449,7 +449,7 @@ class ProjectController extends Controller
     /**
      * Retry generating project structure after a failure. No additional credits; re-dispatches job.
      */
-    public function retryStructure(Project $project)
+    public function retryStructure(Project $project, ProjectPipelineService $pipelineService)
     {
         if ($project->status !== ProjectStatus::Failed) {
             return redirect()->route('projects.show', $project)->withErrors(['project' => 'Can only retry when project status is Failed.']);
@@ -465,8 +465,7 @@ class ProjectController extends Controller
             ]);
         }
 
-        $project->update(['status' => ProjectStatus::Generating]);
-        GenerateProjectStructureJob::dispatch($project);
+        $pipelineService->startGeneration($project);
 
         return redirect()->route('projects.show', $project)->with('success', 'Structure generation has been queued for retry.');
     }

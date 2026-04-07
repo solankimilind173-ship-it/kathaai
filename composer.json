@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "kathaai/platform",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "KathaAI video storytelling platform built with Laravel, Inertia, and React.",
+    "keywords": ["kathaai", "laravel", "inertia", "react", "video-generation"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
@@ -62,6 +62,13 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "lint": [
+            "./vendor/bin/pint --test"
+        ],
+        "quality": [
+            "@composer lint",
+            "@composer test"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

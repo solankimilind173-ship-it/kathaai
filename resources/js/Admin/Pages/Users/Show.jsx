@@ -29,7 +29,12 @@ export default function AdminUsersShow({ user, plans = [], totals = {}, creditsU
 
     return (
         <AdminLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-stone-800">View user</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-white">View user</h2>}
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Users', href: route('admin.users.index') },
+                { label: user?.name ?? 'View user' },
+            ]}
         >
             <Head title={`Admin – ${user?.name}`} />
 

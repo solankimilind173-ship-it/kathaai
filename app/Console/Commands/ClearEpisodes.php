@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Episode;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 class ClearEpisodes extends Command
 {
@@ -23,9 +25,14 @@ class ClearEpisodes extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
-        \App\Models\Episode::truncate();
+        Schema::withoutForeignKeyConstraints(function (): void {
+            Episode::query()->delete();
+        });
+
         $this->info('Episodes cleared!');
+
+        return self::SUCCESS;
     }
 }

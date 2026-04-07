@@ -51,6 +51,7 @@ class HandleInertiaRequests extends Middleware
                 return [
                     'status' => $user->onboarding_status ?? 'not_started',
                     'last_step' => $user->last_onboarding_step,
+                    'demo_project_eligible' => $user->isEligibleForDemoProject(),
                 ];
             },
         ];

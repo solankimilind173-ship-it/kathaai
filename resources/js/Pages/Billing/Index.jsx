@@ -28,8 +28,9 @@ export default function BillingIndex({
 
     return (
         <AuthenticatedLayout
+            tone="billing"
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">
                     Billing &amp; usage
                 </h2>
             }

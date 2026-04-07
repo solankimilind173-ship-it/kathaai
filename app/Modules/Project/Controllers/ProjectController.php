@@ -191,6 +191,7 @@ class ProjectController extends Controller
     {
         $user = auth()->user();
         $plan = $user->plan;
+        $demoProjectEligible = $user->isEligibleForDemoProject();
         $episodeLimitService = app(\App\Services\EpisodeGenerationLimitService::class);
         $planPayload = $plan
             ? [
@@ -213,6 +214,9 @@ class ProjectController extends Controller
             ];
         })->values()->all();
 
+        $sceneGenerationCredits = $demoProjectEligible ? 0 : $creditService->sceneGenerationCost();
+        $hasEnoughForSceneGeneration = $demoProjectEligible ? true : $creditService->hasEnoughForSceneGeneration($user);
+
         return Inertia::render('Project/Pages/Create', [
             'languages' => Language::active()->get(),
             'books' => Book::forDropdown($user->id)->get(['id', 'title', 'description']),
@@ -224,9 +228,10 @@ class ProjectController extends Controller
                 'used_today' => $episodeLimitService->episodesGeneratedToday($user),
                 'remaining_today' => $episodeLimitService->remainingSlotsToday($user),
             ],
-            'sceneGenerationCredits' => $creditService->sceneGenerationCost(),
+            'sceneGenerationCredits' => $sceneGenerationCredits,
             'userCredits' => (int) $user->credits,
-            'hasEnoughForSceneGeneration' => $creditService->hasEnoughForSceneGeneration($user),
+            'hasEnoughForSceneGeneration' => $hasEnoughForSceneGeneration,
+            'demoProjectEligible' => $demoProjectEligible,
         ]);
     }
 
@@ -234,6 +239,7 @@ class ProjectController extends Controller
     {
         $user = auth()->user();
         $plan = $user->plan;
+        $isFreeDemoProject = $user->isEligibleForDemoProject();
 
         $rules = [
             'source_type' => 'required|in:library,uploaded',
@@ -321,7 +327,7 @@ class ProjectController extends Controller
         if (($request->quality ?? '1080p') === '4k' && ! $allow4k) {
             return back()->withErrors(['quality' => '4K available in Pro plan.'])->withInput();
         }
-        if (! $creditService->hasEnoughForSceneGeneration($user)) {
+        if (! $isFreeDemoProject && ! $creditService->hasEnoughForSceneGeneration($user)) {
             return back()->withErrors([
                 'credits' => 'Insufficient credits for scene generation. Required: '.$creditService->sceneGenerationCost().', available: '.$user->credits.'.',
             ])->withInput();
@@ -362,18 +368,35 @@ class ProjectController extends Controller
         if (! empty($request->dub_languages)) {
             $project->dubLanguages()->sync($request->dub_languages);
         }
-        $creditService->deductForSceneGeneration($user, $project);
+
+        if (! $isFreeDemoProject) {
+            $creditService->deductForSceneGeneration($user, $project);
+        }
+
         $project->update(['status' => ProjectStatus::Generating]);
         GenerateProjectStructureJob::dispatch($project);
+
+        if ($user->onboarding_status !== 'completed') {
+            $user->forceFill([
+                'onboarding_status' => 'in_progress',
+                'last_onboarding_step' => 'demo-project-created',
+            ])->save();
+        }
 
         $notificationService->sendProjectStepCompleted(
             $user,
             $project,
             'Project created',
-            'Your project has been created and structure generation has started.'
+            $isFreeDemoProject
+                ? 'Your free demo project has been created and structure generation has started.'
+                : 'Your project has been created and structure generation has started.'
         );
 
-        return redirect()->route('projects.index')->with('success', 'Project created. Scene generation has started.');
+        return redirect()
+            ->route('projects.show', $project)
+            ->with('success', $isFreeDemoProject
+                ? 'Your free demo project is ready. Scene generation has started, and we will guide you through the next step.'
+                : 'Project created. Scene generation has started.');
     }
 
     public function clone(Project $project)

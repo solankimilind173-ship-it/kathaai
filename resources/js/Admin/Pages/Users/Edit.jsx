@@ -24,7 +24,13 @@ export default function AdminUsersEdit({ user, plans = [] }) {
 
     return (
         <AdminLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Edit user</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Edit user</h2>}
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Users', href: route('admin.users.index') },
+                { label: user?.name ?? 'User', href: route('admin.users.show', user) },
+                { label: 'Edit user' },
+            ]}
         >
             <Head title={`Admin – Edit ${user?.name}`} />
 

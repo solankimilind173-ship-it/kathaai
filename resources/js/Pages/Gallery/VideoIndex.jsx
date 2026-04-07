@@ -56,8 +56,9 @@ export default function VideoIndex({ projects = [] }) {
 
     return (
         <AuthenticatedLayout
+            tone="gallery"
             header={
-                <h2 className="text-xl font-semibold leading-tight">
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">
                     Video Gallery
                 </h2>
             }

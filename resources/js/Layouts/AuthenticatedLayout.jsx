@@ -4,16 +4,28 @@ import FlashToaster from '@/Components/FlashToaster';
 import { Link } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function AuthenticatedLayout({ header, children }) {
+const toneClasses = {
+    studio: 'page-tone-studio',
+    projects: 'page-tone-projects',
+    gallery: 'page-tone-gallery',
+    billing: 'page-tone-billing',
+    upgrade: 'page-tone-upgrade',
+    help: 'page-tone-help',
+    settings: 'page-tone-settings',
+    profile: 'page-tone-profile',
+};
+
+export default function AuthenticatedLayout({ header, children, tone = 'studio' }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const toneClass = toneClasses[tone] ?? toneClasses.studio;
 
     return (
-        <div className="min-h-screen bollywood-bg-fallback bollywood-bg">
+        <div className={`cinematic-shell ${toneClass}`}>
             {/* Mobile overlay when sidebar open */}
             {mobileMenuOpen && (
                 <div
-                    className="fixed inset-0 z-30 bg-stone-900/40 backdrop-blur-sm lg:hidden"
+                    className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
                     onClick={() => setMobileMenuOpen(false)}
                     aria-hidden
                 />
@@ -27,11 +39,11 @@ export default function AuthenticatedLayout({ header, children }) {
             />
 
             {/* Mobile top bar with menu button */}
-            <div className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center gap-3 border-b border-amber-200/50 bg-white/95 px-4 shadow-sm backdrop-blur-sm lg:hidden">
+            <div className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center gap-3 border-b border-white/10 bg-slate-950/70 px-4 shadow-lg backdrop-blur-xl lg:hidden">
                 <button
                     type="button"
                     onClick={() => setMobileMenuOpen((o) => !o)}
-                    className="rounded-lg p-2 text-amber-800 transition hover:bg-amber-100"
+                    className="rounded-full border border-white/10 bg-white/5 p-2 text-white transition hover:bg-white/10"
                     aria-label="Toggle menu"
                 >
                     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -44,16 +56,16 @@ export default function AuthenticatedLayout({ header, children }) {
                 </button>
                 <Link href="/" className="flex items-center gap-2">
                     <ApplicationLogo className="h-8 w-auto shrink-0" />
-                    <span className="font-display text-lg font-semibold text-amber-900">KATHAAI</span>
+                    <span className="font-display text-lg font-semibold tracking-[0.25em] text-white">KATHAAI</span>
                 </Link>
             </div>
 
             {/* Main content - offset by sidebar on desktop, below mobile header on small screens */}
             <main className={`min-h-screen w-full overflow-x-auto transition-[padding] duration-300 pt-16 lg:pt-0 ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64'}`}>
-                <div className="min-h-screen">
+                <div className="page-grid min-h-screen">
                     {header && (
-                        <header className="sticky top-16 z-10 border-b border-amber-200/50 bg-white/90 py-4 shadow-sm backdrop-blur-md lg:top-0 lg:pt-4">
-                            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 text-stone-800">
+                        <header className="page-header-bar sticky top-16 z-10 py-4 shadow-sm lg:top-0 lg:pt-4">
+                            <div className="w-full px-4 text-white sm:px-6 lg:px-8 xl:px-10">
                                 {header}
                             </div>
                         </header>
@@ -61,7 +73,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     <div className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
                         <FlashToaster />
-                        {children}
+                        <div className="fade-rise">{children}</div>
                     </div>
                 </div>
             </main>

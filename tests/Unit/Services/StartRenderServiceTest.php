@@ -13,6 +13,7 @@ use App\Services\OpenAIService;
 use App\Services\StartRenderService;
 use App\Services\VideoMetadataService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Mockery;
 use Tests\TestCase;
 
 class StartRenderServiceTest extends TestCase
@@ -41,7 +42,7 @@ class StartRenderServiceTest extends TestCase
 
         $openAi = Mockery::mock(OpenAIService::class);
         $openAi->shouldReceive('generateVideoMetadata')->andReturn(['title' => 'Test', 'description' => 'desc', 'hashtags' => ['#test']]);
-        $service = new StartRenderService(new CreditCalculator(), new CreditService(), new VideoMetadataService($openAi));
+        $service = new StartRenderService(new CreditCalculator, new CreditService, new VideoMetadataService($openAi));
 
         $this->assertTrue($service->canGenerateTrailer($project, $plan));
     }
@@ -66,7 +67,7 @@ class StartRenderServiceTest extends TestCase
 
         $openAi = Mockery::mock(OpenAIService::class);
         $openAi->shouldReceive('generateVideoMetadata')->andReturn(['title' => 'Test', 'description' => 'desc', 'hashtags' => ['#test']]);
-        $service = new StartRenderService(new CreditCalculator(), new CreditService(), new VideoMetadataService($openAi));
+        $service = new StartRenderService(new CreditCalculator, new CreditService, new VideoMetadataService($openAi));
 
         $this->assertFalse($service->canGenerateTrailer($project, $plan));
 

@@ -7,8 +7,9 @@ import UpdateProfileInformationForm from './Partials/UpdateProfileInformationFor
 export default function Edit({ mustVerifyEmail, status }) {
     return (
         <AuthenticatedLayout
+            tone="profile"
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="font-ui text-xl font-semibold leading-tight text-white">
                     Profile
                 </h2>
             }

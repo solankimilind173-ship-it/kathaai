@@ -60,7 +60,11 @@ export default function AdminNotificationsIndex({ notifications, filters, typeOp
 
     return (
         <AdminLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Notifications</h2>}
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Notifications</h2>}
+            breadcrumbs={[
+                { label: 'Admin', href: route('admin.dashboard') },
+                { label: 'Notifications' },
+            ]}
         >
             <Head title="Admin – Notifications" />
 

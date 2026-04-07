@@ -74,11 +74,11 @@ export default function AdminDashboard({
     return (
         <AdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800">
+                <h2 className="text-xl font-semibold leading-tight text-white">
                     Admin Dashboard
                 </h2>
             }
-            breadcrumbs={[{ label: 'Admin' }]}
+            breadcrumbs={[{ label: 'Admin', href: route('admin.dashboard') }, { label: 'Dashboard' }]}
         >
             <Head title="Admin Dashboard" />
 

@@ -8,7 +8,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DangerButton from '@/Components/DangerButton';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useOnboarding from '@/Hooks/useOnboarding';
 import OnboardingTour from '@/Components/OnboardingTour';
 
@@ -41,6 +41,67 @@ function addDays(date, days) {
     const d = new Date(date.getTime());
     d.setDate(d.getDate() + days);
     return d;
+}
+
+const pipelineStageVariantMap = {
+    completed: 'completed',
+    current: 'pending',
+    failed: 'danger',
+    pending: 'default',
+};
+
+function pipelineStageVariant(status) {
+    return pipelineStageVariantMap[status] ?? 'default';
+}
+
+function PipelineOverview({ pipeline }) {
+    if (!pipeline) return null;
+
+    return (
+        <Card>
+            <Card.Header>
+                <Card.Title>Cinematic pipeline</Card.Title>
+                <p className="mt-1 text-sm text-gray-500">
+                    Track how the story is becoming a cinematic video, from planning to final render.
+                </p>
+            </Card.Header>
+            <div className="space-y-5">
+                <div>
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-gray-700">Overall progress</p>
+                        <p className="text-sm font-semibold text-gray-900">{pipeline.progress_percentage ?? 0}%</p>
+                    </div>
+                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-gray-100">
+                        <div
+                            className="h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 transition-all"
+                            style={{ width: `${pipeline.progress_percentage ?? 0}%` }}
+                        />
+                    </div>
+                    {pipeline.next_action && (
+                        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                            {pipeline.next_action}
+                        </p>
+                    )}
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                    {(pipeline.stages ?? []).map((stage) => (
+                        <div key={stage.key} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-900">{stage.label}</h3>
+                                    <p className="mt-1 text-sm text-gray-600">{stage.detail}</p>
+                                </div>
+                                <Badge variant={pipelineStageVariant(stage.status)}>
+                                    {stage.status}
+                                </Badge>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </Card>
+    );
 }
 
 const CAMERA_STYLES = [
@@ -371,6 +432,7 @@ function EpisodeList({
 export default function Show({
     project,
     plan,
+    pipeline = null,
     projectAnalytics = null,
     estimatedCredits,
     creditOptions,
@@ -393,11 +455,25 @@ export default function Show({
     const canRetryRender = !viewOnly && !isArchived && hasFailedRender && projectStatus !== 'rendering';
 
     const { onboarding, startTour, advance, completeTour, skipTour } = useOnboarding();
+    const [showProjectTour, setShowProjectTour] = useState(false);
 
-    const shouldShowProjectTour = !viewOnly && onboarding.status === 'in_progress';
+    const shouldShowProjectTour =
+        !viewOnly &&
+        onboarding.status === 'in_progress' &&
+        ['demo-project-created', 'create-submit-project', 'project-episodes-section', 'project-render-button', null].includes(onboarding.last_step ?? null);
+
+    useEffect(() => {
+        if (!viewOnly && onboarding.status === 'not_started' && onboarding.demo_project_eligible) {
+            startTour();
+        }
+    }, [onboarding.demo_project_eligible, onboarding.status, startTour, viewOnly]);
+
+    useEffect(() => {
+        setShowProjectTour(shouldShowProjectTour);
+    }, [shouldShowProjectTour]);
 
     const projectTourSteps = [];
-    if (shouldShowProjectTour) {
+    if (showProjectTour) {
         projectTourSteps.push(
             {
                 id: 'project-episodes-section',
@@ -509,7 +585,7 @@ export default function Show({
     }
 
     const Layout = viewOnly ? ShareLayout : AuthenticatedLayout;
-    const layoutProps = viewOnly ? {} : { header: <h2 className="text-xl font-semibold leading-tight text-gray-800">Project</h2> };
+    const layoutProps = viewOnly ? {} : { tone: 'projects', header: <h2 className="font-ui text-xl font-semibold leading-tight text-white">Project</h2> };
 
     return (
         <Layout {...layoutProps}>
@@ -575,6 +651,34 @@ export default function Show({
                         </div>
                     )}
 
+                    {!viewOnly && onboarding.status === 'in_progress' && (
+                        <Card className="border-amber-300/40 bg-amber-50/90">
+                            <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">Guided review</p>
+                                    <h3 className="mt-2 font-display text-2xl text-stone-900">Your first demo project is in motion.</h3>
+                                    <p className="mt-2 text-sm leading-7 text-stone-600">
+                                        KathaAI is turning the story into a structured cinematic plan. Use this page to inspect episodes, scenes, and then move to render when you are ready.
+                                    </p>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">1. Review episodes</p>
+                                        <p className="mt-1 text-sm text-stone-600">Open each episode and scan the generated scene flow.</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">2. Refine if needed</p>
+                                        <p className="mt-1 text-sm text-stone-600">Adjust scene copy, timing, and style before final output.</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-amber-200 bg-white/80 px-4 py-4">
+                                        <p className="text-sm font-semibold text-stone-900">3. Render</p>
+                                        <p className="mt-1 text-sm text-stone-600">Start the first cinematic output once the structure looks right.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
                     {/* 1. Overview */}
                     <Card>
                         <Card.Header>
@@ -631,6 +735,8 @@ export default function Show({
                             </div>
                         </dl>
                     </Card>
+
+                    <PipelineOverview pipeline={pipeline} />
 
                     {/* Visibility toggle + share link (owner only) — show only for projects created from uploaded PDF/file */}
                     {!viewOnly && project.book?.user_id != null && (
@@ -1027,12 +1133,18 @@ export default function Show({
                 </div>
             </div>
 
-            {shouldShowProjectTour && projectTourSteps.length > 0 && (
+            {showProjectTour && projectTourSteps.length > 0 && (
                 <OnboardingTour
-                    open={shouldShowProjectTour}
+                    open={showProjectTour}
                     steps={projectTourSteps}
-                    onClose={skipTour}
-                    onFinish={(lastStepId) => completeTour(lastStepId)}
+                    onClose={() => {
+                        setShowProjectTour(false);
+                        skipTour();
+                    }}
+                    onFinish={(lastStepId) => {
+                        setShowProjectTour(false);
+                        completeTour(lastStepId);
+                    }}
                     onAdvance={(stepId) => advance(stepId)}
                 />
             )}
